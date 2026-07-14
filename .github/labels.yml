@@ -1,0 +1,26 @@
+# Declarative labels for the six-label vocabulary in AGENTS.md §5 and
+# CONTRIBUTING.md "Label vocabulary". Synced by .github/workflows/labels.yml.
+
+- name: "lane:quick"
+  color: "0e8a16"
+  description: "Quick-lane PR (small, bounded, no design record). AGENTS.md §4."
+
+- name: "lane:considered"
+  color: "1d76db"
+  description: "Spec-lane PR (design decision recorded in .tasks/<id>/)."
+
+- name: "lane-pending"
+  color: "fbca04"
+  description: "Issue triaged, lane not confirmed yet. Human flips to lane:considered."
+
+- name: "plan-approved"
+  color: "5319e7"
+  description: "spec.md + plan.md accepted; agent may implement. Spec lane only."
+
+- name: "agent-driven"
+  color: "c5def5"
+  description: "Produced by an agent under the autodev workflow. Audit signal."
+
+- name: "reverted"
+  color: "d93f0b"
+  description: "Applied post-merge when a change is rolled back."

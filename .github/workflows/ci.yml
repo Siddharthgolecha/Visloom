@@ -1,0 +1,60 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      code: ${{ steps.filter.outputs.code }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          # AGENTS.md §8 path-filter: skip CI when the diff is only task-dir
+          # metadata or docs. `code` matches anything not on the exclusion list
+          # (dorny/paths-filter requires at least one positive pattern; the
+          # leading `**` is the positive match and the `!` patterns subtract).
+          filters: |
+            code:
+              - '**'
+              - '!.tasks/**'
+              - '!.github/**'
+              - '!**/*.md'
+              - '!LICENSE'
+
+  setup:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Placeholder
+        run: |
+          echo "No product code yet — CI skeleton in place."
+          echo "Fill this workflow when the stack is chosen."
+
+  # Uncomment when the stack lands. Keep changes-gated so task-only diffs stay fast.
+  #
+  # test:
+  #   needs: changes
+  #   if: needs.changes.outputs.code == 'true'
+  #   runs-on: ubuntu-latest
+  #   strategy:
+  #     matrix:
+  #       node: [20]
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - uses: actions/setup-node@v4
+  #       with:
+  #         node-version: ${{ matrix.node }}
+  #         cache: npm
+  #     - run: npm ci
+  #     - run: npm test

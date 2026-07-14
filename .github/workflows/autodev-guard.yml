@@ -1,0 +1,196 @@
+name: autodev-guard
+
+# Enforces the workflow invariants from AGENTS.md (§4 lane decision,
+# §5 lifecycles) at CI level. Every check short-circuits to success when
+# the diff is only under .tasks/** (per AGENTS.md §8 path-filter).
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, labeled, unlabeled, ready_for_review, converted_to_draft]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  guard:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - id: paths
+        name: Compute path filter
+        uses: dorny/paths-filter@v3
+        with:
+          # `non_task` is true whenever the PR touches any file outside .tasks/**.
+          # AGENTS.md §8 short-circuits the guard when the diff is task-dir only.
+          filters: |
+            non_task:
+              - '**'
+              - '!.tasks/**'
+
+      - id: pr
+        name: Read PR metadata
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          pr_number="${{ github.event.pull_request.number }}"
+          json="$(gh pr view "$pr_number" --json labels,isDraft,body,files)"
+          labels="$(jq -r '.labels[].name' <<<"$json" | sort -u | paste -sd, -)"
+          is_draft="$(jq -r '.isDraft' <<<"$json")"
+          body="$(jq -r '.body' <<<"$json")"
+          files="$(jq -r '.files[].path' <<<"$json")"
+          {
+            echo "labels=$labels"
+            echo "is_draft=$is_draft"
+          } >>"$GITHUB_OUTPUT"
+          # Body and files can be large / multiline — stash for later steps.
+          printf '%s\n' "$body"  >"$RUNNER_TEMP/pr_body.txt"
+          printf '%s\n' "$files" >"$RUNNER_TEMP/pr_files.txt"
+
+      - name: Path-filter escape hatch
+        id: escape
+        run: |
+          if [[ "${{ steps.paths.outputs.non_task }}" == "false" ]]; then
+            echo "All changed files are under .tasks/** — short-circuiting guard checks."
+            echo "skip=true" >>"$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >>"$GITHUB_OUTPUT"
+          fi
+
+      - name: Lane label present (exactly one)
+        if: steps.escape.outputs.skip == 'false'
+        run: |
+          set -euo pipefail
+          labels="${{ steps.pr.outputs.labels }}"
+          has_quick=false; has_considered=false
+          IFS=',' read -ra arr <<<"$labels"
+          for l in "${arr[@]}"; do
+            [[ "$l" == "lane:quick" ]] && has_quick=true
+            [[ "$l" == "lane:considered" ]] && has_considered=true
+          done
+          if $has_quick && $has_considered; then
+            echo "::error::PR carries BOTH lane:quick and lane:considered. Pick one (AGENTS.md §4)."
+            exit 1
+          fi
+          if ! $has_quick && ! $has_considered; then
+            echo "::error::PR is missing a lane label. Add lane:quick or lane:considered (AGENTS.md §4)."
+            exit 1
+          fi
+
+      - name: Draft until plan-approved (Spec lane)
+        if: steps.escape.outputs.skip == 'false'
+        run: |
+          set -euo pipefail
+          labels="${{ steps.pr.outputs.labels }}"
+          is_draft="${{ steps.pr.outputs.is_draft }}"
+          if [[ ",$labels," == *",lane:considered,"* ]] \
+             && [[ "$is_draft" == "false" ]] \
+             && [[ ",$labels," != *",plan-approved,"* ]]; then
+            echo "::error::Spec-lane PR marked ready without plan-approved (AGENTS.md §5 step 7)."
+            exit 1
+          fi
+
+      - name: Task dir present (Spec lane)
+        if: steps.escape.outputs.skip == 'false'
+        run: |
+          set -euo pipefail
+          labels="${{ steps.pr.outputs.labels }}"
+          if [[ ",$labels," != *",lane:considered,"* ]]; then
+            echo "Not a Spec-lane PR — skip."
+            exit 0
+          fi
+          files="$RUNNER_TEMP/pr_files.txt"
+          spec="$(grep -E '^\.tasks/[^/]+/spec\.md$' "$files" || true)"
+          plan="$(grep -E '^\.tasks/[^/]+/plan\.md$' "$files" || true)"
+          if [[ -z "$spec" || -z "$plan" ]]; then
+            echo "::error::Spec-lane PR must touch .tasks/<id>/spec.md AND plan.md (AGENTS.md §5 step 3)."
+            exit 1
+          fi
+
+      - name: Quick lane bounds
+        if: steps.escape.outputs.skip == 'false'
+        run: |
+          set -euo pipefail
+          labels="${{ steps.pr.outputs.labels }}"
+          if [[ ",$labels," != *",lane:quick,"* ]]; then
+            exit 0
+          fi
+          # Overlap list: currently empty per AGENTS.md §6. When entries land,
+          # match them here and hard-fail if a Quick PR touches one.
+          overlap_hits=""
+          # Example (uncomment when a schema stabilizes):
+          # overlap_hits="$(grep -E '^schemas/.*\.ts$' "$RUNNER_TEMP/pr_files.txt" || true)"
+          if [[ -n "$overlap_hits" ]]; then
+            echo "::error::Quick-lane PR touches overlap-list files — restart in Spec lane (AGENTS.md §4)."
+            echo "$overlap_hits"
+            exit 1
+          fi
+          # Soft LOC warning (warn only). Approximation via github.event.pull_request stats.
+          additions=${{ github.event.pull_request.additions }}
+          deletions=${{ github.event.pull_request.deletions }}
+          total=$(( additions + deletions ))
+          if (( additions > 200 || total > 400 )); then
+            echo "::warning::Quick-lane PR is large (+$additions -$deletions = $total). Consider escalating to Spec lane (AGENTS.md §4)."
+          fi
+
+      - name: No .tasks/*/context.md committed
+        if: steps.escape.outputs.skip == 'false'
+        run: |
+          set -euo pipefail
+          hits="$(grep -E '^\.tasks/[^/]+/context\.md$' "$RUNNER_TEMP/pr_files.txt" || true)"
+          if [[ -n "$hits" ]]; then
+            echo "::error::.tasks/<id>/context.md is gitignored per AGENTS.md §8 — never commit it."
+            echo "$hits"
+            exit 1
+          fi
+
+      - name: Append-only implementation.md
+        if: steps.escape.outputs.skip == 'false'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          # For each implementation.md touched in the PR, ensure no lines were
+          # removed relative to the base (strikethrough via ~~…~~ is allowed
+          # because it's an edit-in-place, not a deletion).
+          touched="$(grep -E '^\.tasks/[^/]+/implementation\.md$' "$RUNNER_TEMP/pr_files.txt" || true)"
+          [[ -n "$touched" ]] || { echo "no implementation.md changes"; exit 0; }
+          fail=false
+          while IFS= read -r f; do
+            [[ -n "$f" ]] || continue
+            # A pure-append diff has zero "^-" lines (excluding the file header "---").
+            removed="$(git diff "$BASE_SHA".."$HEAD_SHA" -- "$f" \
+                       | awk '/^--- /{next} /^-/{print}' \
+                       | wc -l | tr -d ' ')"
+            if [[ "$removed" != "0" ]]; then
+              echo "::error file=$f::implementation.md is append-only (AGENTS.md §2). Use ~~strikethrough~~ instead of deleting."
+              fail=true
+            fi
+          done <<<"$touched"
+          $fail && exit 1 || exit 0
+
+      - name: PR body has required sections
+        if: steps.escape.outputs.skip == 'false'
+        run: |
+          set -euo pipefail
+          labels="${{ steps.pr.outputs.labels }}"
+          body="$RUNNER_TEMP/pr_body.txt"
+          if [[ ",$labels," == *",lane:quick,"* ]]; then
+            for header in '**Problem**' '**Change**' '**Tested**'; do
+              if ! grep -qF "$header" "$body"; then
+                echo "::error::Quick-lane PR body is missing '$header' section (see .github/PULL_REQUEST_TEMPLATE.md)."
+                exit 1
+              fi
+            done
+          fi
+          if [[ ",$labels," == *",lane:considered,"* ]]; then
+            if ! grep -qF '## Implementation summary' "$body"; then
+              echo "::error::Spec-lane PR body is missing '## Implementation summary' section (see .github/PULL_REQUEST_TEMPLATE.md)."
+              exit 1
+            fi
+          fi
