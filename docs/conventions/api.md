@@ -42,5 +42,7 @@ retry. Storage lands in slice 6.
 
 Session cookie only — opaque token, HTTP-only, `Secure`,
 `SameSite=Lax` — per ADR
-[0005](../adr/0005-auth-oauth-and-password.md). No bearer tokens
-on browser routes; a future ADR may add m2m bearer support.
+[0005](../adr/0005-owner-auth-and-rbac.md), and only on owner
+routes. Attendee routes accept a share-token URL parameter and
+are unauthenticated. No bearer tokens on browser routes; a
+future ADR may add m2m bearer support.

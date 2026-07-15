@@ -24,9 +24,9 @@ epic rather than a chain of forced splits.
 |---|---|
 | Repo shape | Polyglot monorepo, no meta-tool |
 | Deploy target | Single-VPS Docker Compose (dev + prod overlays) |
-| Auth | Google OAuth + password login + Postgres-backed server-side sessions |
+| Auth | Owners: Google OAuth + password backup, Postgres sessions. Attendees: unauthenticated, share-token URL. RBAC per event: owner/editor/reader. |
 | Media scope | Media-abstracted day 1 (photo · video-keyframe) |
-| Tenancy | Photographer-owned events; attendees search via share tokens |
+| Tenancy | Owner-managed events; attendees browse via share tokens |
 | Indexing transport | Redis Streams (async, event-driven) |
 | Search transport | API embeds selfie inline via CPU ONNX |
 | Inference runtime | Worker: CUDA + CPU fallback; API: CPU-only |

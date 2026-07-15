@@ -104,7 +104,7 @@ across every ADR; convention docs stay short and cite ADRs by number.
 | 0002 | Layered + hex-where-appropriate; VSA + lightweight CQRS | framework |
 | 0003 | Polyglot monorepo, no meta-tool | fork |
 | 0004 | Docker Compose on a single VPS (dev + prod overlays) | fork |
-| 0005 | Auth: Google OAuth + password login, Postgres sessions | fork |
+| 0005 | Owner auth (Google OAuth + password backup) and role-based access | fork |
 | 0006 | Redis Streams for indexing + versioned stream naming | fork |
 
 ADR 0006 folds transport + naming into one file with two
@@ -121,22 +121,30 @@ owns `AGENTS.md` §6 per the Epic plan). No CI, no code.
 
 ### Deviations from parent fork table
 
-Two forks are refined here from their wording on
-`.tasks/epics/arch-scaffold/parent.md:21-35`, both approved on
-PR #11:
+Three forks are refined here from their wording in
+`.tasks/epics/arch-scaffold/parent.md`, all approved through PR
+#11:
 
-- **Auth (row 3 of parent fork table).** Extends from "Google OAuth
-  + Postgres-backed server-side sessions" to include password-based
-  login as a first-class second method. Same session backend
-  (Postgres-backed server-side); the change adds a second identity
-  provider (local credential store) beside Google OAuth.
-- **Architecture shape.** Adds Vertical Slice Architecture as the
-  feature-encapsulation unit and a lightweight read-vs-write CQRS
-  rubric for choosing where hex applies. This is a refinement of
-  "hexagonal-where-appropriate" — not a new fork.
+- **Auth (row 3).** Was "Google OAuth + Postgres-backed
+  server-side sessions." Refined to: **owners** authenticate via
+  Google OAuth (primary) or email+password (backup) into a
+  Postgres session; **attendees** are unauthenticated and access
+  events via revocable share-token URLs; per-event authorization
+  is role-based (`owner`, `editor`, `reader`). Owner is a
+  platform role, not a job title — replaces "photographer"
+  throughout.
+- **Tenancy (row 5).** Was "Photographer-owned events; attendees
+  search via share tokens." Refined to "Owner-managed events;
+  attendees browse via share tokens." Same shape, corrected
+  wording.
+- **Architecture shape (row 1's implicit companion).** Adds
+  Vertical Slice Architecture as the feature-encapsulation unit
+  and a lightweight read-vs-write CQRS rubric for choosing where
+  hex applies. This is a refinement of "hexagonal-where-
+  appropriate" — not a new fork.
 
-Slice-2 ADRs and the parent-issue fork table body will be
-reconciled in this slice's PR.
+Both parent-issue fork-table rows are updated in this slice's
+PR (Auth row + Tenancy row).
 
 ### Alternative considered
 
@@ -163,11 +171,13 @@ and 0007 renumbers, cascading into slice 2's approved plan.
   validate the shape in slices 6/7; if a runtime doesn't fit, ADR
   0002 gets a `Superseded-by` header per the status vocabulary in
   the index.
-- **ADR 0005 dual-auth widens surface area.** Password login adds a
-  credential-storage decision (hashing algorithm, rotation, rate-
-  limiting, account recovery) that Google OAuth avoided. This ADR
-  records the *choice* to support both; the tech details land in a
-  future ADR alongside the API scaffold (slice 6).
+- **ADR 0005 widens surface area.** The password backup path
+  adds a credential-storage decision (hashing, rotation, rate-
+  limiting, account recovery) Google-OAuth-only avoided; RBAC
+  adds an `AuthzPolicy` port + an `event_memberships` table.
+  This ADR records the **choices** (dual credentials, three
+  roles, share-token attendee path); tech details land in a
+  future ADR with slice 6.
 
 ## Failure modes
 
@@ -190,12 +200,19 @@ Adversarial re-read.
   `Superseded-by` before slices 6/7 write conflicting code.
   *Mitigation:* the rubric is stated as a **default**, not an
   invariant, in ADR 0002's Decision Outcome.
-- **Parent fork-table update is silent.** Editing
-  `.tasks/epics/arch-scaffold/parent.md` in this PR without
-  flagging it in the PR body could hide the auth-scope change.
-  *Mitigation:* the Deviations section above records the drift
-  explicitly and the PR body will link to it at ready-time via
-  `implementation.md` `## Summary`.
+- **Parent fork-table update is silent.** Two rows change in
+  this PR (Auth, Tenancy); if either lands without a mention in
+  the PR body, downstream slices could plan against the stale
+  wording. *Mitigation:* the Deviations section above records
+  both edits explicitly and the PR body links to it at
+  ready-time via `implementation.md` `## Summary`.
+- **Attendee share-token path has no user model.** A share
+  token grants read access to an event without a `Principal`,
+  so anything that logs "who did X" will show the token, not a
+  person. *Mitigation:* rate-limiting and abuse detection on
+  the token are documented as follow-up work in ADR 0005's
+  Consequences; the trade is that attendees never see a login
+  wall.
 - **Index claims statuses the ADRs don't yet exercise.**
   *Mitigation:* the index lists only Proposed / Accepted /
   Superseded — no exotic statuses. All six ADRs land as `Accepted`.
@@ -226,16 +243,26 @@ Adversarial re-read.
       slice 5's `infra/compose/`; 0006 → slice 3's
       `packages/contracts/events/`). *Falsified if:* any fork ADR's
       Consequences section makes no forward reference.
-- [ ] ADR 0005 mentions **both** identity paths (Google OAuth
-      *and* password login). *Falsified if:*
-      `rg -c 'password' docs/adr/0005-*.md` returns `0`.
+- [ ] ADR 0005 covers all three access classes it locks:
+      attendee share-token, owner Google OAuth, owner password
+      backup. *Falsified if:* `rg -c 'share.token' docs/adr/0005-*.md`
+      returns `0`, or `rg -c 'password' docs/adr/0005-*.md`
+      returns `0`.
+- [ ] ADR 0005 names the three roles (`owner`, `editor`,
+      `reader`). *Falsified if:*
+      `rg -c '\bowner\b|\beditor\b|\breader\b' docs/adr/0005-*.md`
+      returns fewer than three distinct hits.
 - [ ] ADR 0005 `## Consequences` names `NoopAuthProvider` as the
       local-dev fallback. *Falsified if:*
       `rg -c 'NoopAuthProvider' docs/adr/0005-*.md` returns `0`.
 - [ ] ADR 0006 has two `### Decision Outcome` sub-sections
       (transport + naming). *Falsified if:*
       `rg -c '^### ' docs/adr/0006-*.md` returns fewer than 2.
-- [ ] Parent fork table (`.tasks/epics/arch-scaffold/parent.md`)
-      is updated so the Auth row matches the ADR 0005 wording.
-      *Falsified if:* `rg -c 'password' .tasks/epics/arch-scaffold/parent.md`
+- [ ] Parent fork table Auth row matches the ADR 0005 wording
+      (owners + attendees + RBAC). *Falsified if:*
+      `rg -c 'share.token' .tasks/epics/arch-scaffold/parent.md`
       returns `0`.
+- [ ] Parent fork table Tenancy row is worded "Owner-managed"
+      (not "Photographer-owned"). *Falsified if:*
+      `rg -c 'Photographer-owned' .tasks/epics/arch-scaffold/parent.md`
+      returns > `0`.

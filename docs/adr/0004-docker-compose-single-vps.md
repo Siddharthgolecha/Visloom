@@ -6,9 +6,9 @@
 
 ## Context and Problem Statement
 
-Initial target: one photographer + attendees. Traffic and
-durability fit inside a single VPS with pg + Redis + Caddy. k8s
-now trades ops complexity for scale we don't have.
+Initial target: one owner-managed event + its attendees. Traffic
+and durability fit inside a single VPS with pg + Redis + Caddy.
+k8s now trades ops complexity for scale we don't have.
 
 ## Decision Drivers
 

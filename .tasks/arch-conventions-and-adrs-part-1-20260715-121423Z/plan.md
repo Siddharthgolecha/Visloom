@@ -29,15 +29,21 @@
    numbering) — locks deploy target. Considered Options: k8s,
    Fly.io, plain Compose. Consequences names slice 5's dev + prod
    overlay pattern.
-7. **Write ADR 0005 — Auth: Google OAuth + password login,
-   Postgres sessions** (spec §ADR numbering, OQ 4, §Deviations) —
-   locks the dual-identity model on top of a single Postgres-backed
-   session store. Considered Options: JWT stateless, Auth0,
-   Google-OAuth-only, chosen dual-provider. Consequences names the
-   `NoopAuthProvider` local-dev fallback (tech details deferred to
-   a future ADR) and flags the widened surface area — credential
-   hashing, rate-limiting, account recovery — for slice-6/API-
-   scaffold time.
+7. **Write ADR 0005 — Owner auth (Google OAuth + password
+   backup) and role-based access** (spec §ADR numbering, OQ 4,
+   §Deviations) — locks three coupled decisions in one file with
+   three `### Decision Outcome` sub-sections: (a) **attendee
+   access** is unauthenticated via a per-event revocable
+   share-token URL; (b) **owner identity** is Google OAuth as
+   primary + email/password as backup, minting the same
+   Postgres session cookie; (c) **authorization** is role-based
+   per event — `owner`, `editor`, `reader`. Considered Options
+   split into owner-identity alternatives (Google-only, password-
+   only, Auth0, chosen dual) and authorization alternatives
+   (binary owner/not-owner, full ABAC, chosen 3-role RBAC).
+   Consequences names the `NoopAuthProvider` local-dev fallback
+   and defers credential-hashing / rate-limit / recovery tech to
+   a slice-6 ADR.
 8. **Write ADR 0006 — Redis Streams + versioned naming** (spec §ADR
    numbering, OQ 2) — locks indexing transport and stream-name
    versioning. **Two `### Decision Outcome` sub-sections** (per
@@ -60,10 +66,13 @@
     same-origin — resolved OQ 3), health-endpoint contract
     (`/healthz`), error envelope, idempotency headers, versioning
     posture (URL-path `/api/v1/`).
-12. **Update parent fork table** (spec §Deviations) — edit the
-    Auth row of `.tasks/epics/arch-scaffold/parent.md` so it reads
-    "Google OAuth + password login + Postgres-backed server-side
-    sessions", matching ADR 0005.
+12. **Update parent fork table** (spec §Deviations) — edit two
+    rows of `.tasks/epics/arch-scaffold/parent.md`: **Auth**
+    reads "Owners: Google OAuth + password backup, Postgres
+    sessions. Attendees: unauthenticated, share-token URL. RBAC
+    per event: owner/editor/reader." **Tenancy** reads
+    "Owner-managed events; attendees browse via share tokens"
+    (replacing "Photographer-owned"). Matches ADR 0005.
 13. **Verify** (spec §Acceptance criteria) — run the checks in the
     spec's Verification section.
 
@@ -79,16 +88,17 @@ table.
   Framework ADR (VSA + CQRS refinement).
 - `docs/adr/0003-polyglot-monorepo.md` — new. Fork ADR.
 - `docs/adr/0004-docker-compose-single-vps.md` — new. Fork ADR.
-- `docs/adr/0005-auth-oauth-and-password.md` — new. Fork ADR
-  (dual-identity: Google OAuth + password).
+- `docs/adr/0005-owner-auth-and-rbac.md` — new. Fork ADR
+  covering attendee share-token access, owner Google OAuth +
+  password backup, and per-event RBAC (owner/editor/reader).
 - `docs/adr/0006-redis-streams-versioned-naming.md` — new. Fork
   ADR with two `### Decision Outcome` sub-sections.
 - `docs/conventions/coding.md` — new. Cross-language rules.
 - `docs/conventions/events.md` — new. Stream naming + versioning.
 - `docs/conventions/api.md` — new. HTTP API conventions with
   `/api/v1/` URL-path versioning.
-- `.tasks/epics/arch-scaffold/parent.md` — edit the Auth row of
-  the fork table.
+- `.tasks/epics/arch-scaffold/parent.md` — edit the Auth and
+  Tenancy rows of the fork table.
 
 ## Depends on
 
