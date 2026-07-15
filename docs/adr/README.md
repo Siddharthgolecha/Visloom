@@ -14,10 +14,22 @@ sections). One decision per file, numbered monotonically.
 | [0004](0004-docker-compose-single-vps.md) | Docker Compose on a single VPS | Accepted |
 | [0005](0005-owner-auth-and-rbac.md) | Owner auth (Google OAuth + password backup) and role-based access | Accepted |
 | [0006](0006-redis-streams-versioned-naming.md) | Redis Streams for indexing + versioned stream naming | Accepted |
+| [0007](0007-media-scope-photo-and-video-keyframe.md) | Media scope: photo + video-keyframe day-1 | Accepted |
+| [0008](0008-tenancy-owner-events-and-share-tokens.md) | Tenancy: owner-owned events + share tokens | Accepted |
+| [0009](0009-search-transport-cpu-onnx-inline.md) | Search transport: API embeds selfie inline via CPU ONNX | Accepted |
+| [0010](0010-inference-runtime-worker-cuda-api-cpu.md) | Inference runtime: Worker CUDA+CPU / API CPU-only | Accepted |
+| [0011](0011-generated-contracts-committed-with-drift-check.md) | Generated contracts: committed + CI drift-check | Accepted |
+| [0012](0012-python-deps-uv-and-uv-lock.md) | Python deps: `uv` + `uv.lock` | Accepted |
+| [0013](0013-noop-auth-provider.md) | NoopAuthProvider wire-up + guard checks | Accepted |
+| [0014](0014-password-crypto-and-rate-limit.md) | Password crypto + rate limit + recovery | Accepted |
+| [0015](0015-observability-otel-first.md) | Observability: OTel-first (logs / traces / metrics folded) | Accepted |
+| [0016](0016-redis-usage.md) | Redis usage: key naming + TTL taxonomy | Accepted |
+| [0017](0017-versioning-policy.md) | Versioning policy: URL-path + event streams + contracts | Accepted |
+| [0018](0018-documentation-tooling.md) | Documentation tooling: MyST-Sphinx / rustdoc / TypeDoc | Accepted |
 
 ## Numbering
 
-Four-digit, monotonic, no gaps. `0007` is next. Numbers are
+Four-digit, monotonic, no gaps. `0019` is next. Numbers are
 allocated at PR-open time. Superseded ADRs keep their number and
 gain a `Superseded by [NNNN](NNNN-...md)` line in the `Status`
 field — never renumber.
