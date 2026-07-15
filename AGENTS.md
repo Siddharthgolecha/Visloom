@@ -129,6 +129,40 @@ history is exactly what Spec lane exists to produce. Going the other
 way (mid-Spec discovering it's Quick-sized) is fine: land the scaffold
 as-is with unused sections marked "N/A" and merge.
 
+**Epics — when work decomposes into independent slices.** If a piece
+of work naturally breaks into several **independently reviewable
+subtasks** (e.g. an architecture scaffold that spans docs + contracts
++ three runtimes; a migration where each call-site is its own PR),
+split it into a tracking **parent issue** + one **child issue per
+slice**. Each slice is its own Spec-lane PR with its own `spec.md`,
+`plan.md`, and `plan-approved` gate — the parent is just a live
+checklist.
+
+The trigger is **decomposability, not size**. A 600-LOC atomic
+refactor that must land as one unit stays one PR (with the mid-flight
+~400 LOC checkpoint in §5 step 7 for reviewer sanity-check). A
+200-LOC change split across 8 unrelated files may still be an epic if
+each file's change reviews on its own. When justifying an epic, name
+the independent subtasks and why each stands alone — not the LOC
+total. If every slice hard-depends on the previous, the work isn't
+actually decomposable and shouldn't be an epic.
+
+Use:
+
+```
+parent=$(tools/autodev/task_propose.sh "Epic: <title>" "<why>" \
+           | jq -r .issue_number)
+tools/autodev/task_propose.sh "<slice-1-title>" "<slice-1-body>" \
+    --parent "$parent"
+# … one per slice, in landing order
+```
+
+The `--parent <N>` flag prepends `Parent: #<N>` to the child body and
+appends a `- [ ] #<child> <title>` line to the parent's issue body so
+the parent stays a live checklist. Slice-level `plan.md` names its
+predecessor slice in `## Depends on` — that's how ordering is
+enforced, not by branch protection.
+
 ---
 
 ## 5. Lifecycles
