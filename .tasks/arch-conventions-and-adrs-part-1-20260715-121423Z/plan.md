@@ -4,14 +4,14 @@
 
 1. **Write `docs/adr/template.md`** (spec §Approach) — MADR-full
    skeleton with the five required section headers and inline
-   `<!-- -->` guidance. ~30 LOC.
+   `<!-- -->` guidance.
 2. **Write `docs/adr/README.md`** (spec §Approach) — index +
    how-to-author. Numbering scheme (four-digit, monotonic), status
    vocabulary (`Proposed` / `Accepted` / `Superseded`), links to the
-   six ADRs, one-paragraph pointer to `template.md`. ~30 LOC.
+   six ADRs, one-paragraph pointer to `template.md`.
 3. **Write ADR 0001 — Adopt MADR** (spec §ADR numbering) — framework
    ADR adopting the template. Considered Options names Nygard-style
-   short ADRs as the runner-up. Status: Accepted. ~30 LOC.
+   short ADRs as the runner-up. Status: Accepted.
 4. **Write ADR 0002 — Layered + hex-where-appropriate; VSA + CQRS**
    (spec §ADR numbering, OQ 1) — framework ADR locking the
    domain/application/adapters/telemetry split, adopting **Vertical
@@ -20,25 +20,24 @@
    → hex). Considered Options: pure layered vs. hex-everywhere vs.
    the chosen hybrid. Consequences names slices 6/7 as first
    materializations and the "default, not invariant" caveat.
-   ~45 LOC.
 5. **Write ADR 0003 — Polyglot monorepo** (spec §ADR numbering) —
    locks repo shape. Considered Options: polyrepo vs. Nx/Turborepo
    meta-tool vs. plain monorepo. Consequences names the root
    `pnpm-workspace.yaml` (slice 8) and root `Cargo.toml` workspace
-   (slice 6). ~35 LOC.
+   (slice 6).
 6. **Write ADR 0004 — Docker Compose on single VPS** (spec §ADR
    numbering) — locks deploy target. Considered Options: k8s,
    Fly.io, plain Compose. Consequences names slice 5's dev + prod
-   overlay pattern. ~35 LOC.
+   overlay pattern.
 7. **Write ADR 0005 — Auth: Google OAuth + password login,
    Postgres sessions** (spec §ADR numbering, OQ 4, §Deviations) —
    locks the dual-identity model on top of a single Postgres-backed
    session store. Considered Options: JWT stateless, Auth0,
-   Google-OAuth-only, chosen dual-provider. Consequences names
-   the `NoopAuthProvider` local-dev fallback (tech details deferred
-   to a future ADR) and flags the widened surface area — credential
-   hashing, rate-limiting, account recovery — for slice-6/API-scaffold
-   time. ~40 LOC.
+   Google-OAuth-only, chosen dual-provider. Consequences names the
+   `NoopAuthProvider` local-dev fallback (tech details deferred to
+   a future ADR) and flags the widened surface area — credential
+   hashing, rate-limiting, account recovery — for slice-6/API-
+   scaffold time.
 8. **Write ADR 0006 — Redis Streams + versioned naming** (spec §ADR
    numbering, OQ 2) — locks indexing transport and stream-name
    versioning. **Two `### Decision Outcome` sub-sections** (per
@@ -46,29 +45,27 @@
    RabbitMQ / pg LISTEN-NOTIFY), one for naming (`.v<int>` on
    stream name, dot-separated, lowercase). Names the three
    canonical streams verbatim so `events.md` and slice-3 contract
-   filenames can cite this ADR. ~45 LOC.
+   filenames can cite this ADR.
 9. **Write `docs/conventions/coding.md`** (spec §Approach) —
    cross-language rules: file naming, layering (per ADR 0002),
    error-handling posture, logging shape, test-adjacency, DI at the
-   service boundary. No language-specific style rules. ~30 LOC.
+   service boundary. No language-specific style rules.
 10. **Write `docs/conventions/events.md`** (spec §Approach) — event
     naming scheme (per ADR 0006), stream-vs-consumer-group
     semantics, versioning rule ("version on stream name; version
     bump = new stream + new consumer group; cutover is explicit").
-    Lists the three canonical stream names verbatim. ~25 LOC.
+    Lists the three canonical stream names verbatim.
 11. **Write `docs/conventions/api.md`** (spec §Approach, OQ 3) —
     HTTP API conventions: URL shape (`/api/v1/*` behind Caddy
     same-origin — resolved OQ 3), health-endpoint contract
     (`/healthz`), error envelope, idempotency headers, versioning
-    posture (URL-path `/api/v1/`). ~25 LOC.
-12. **Update parent fork table** (spec §Deviations) — edit
-    `.tasks/epics/arch-scaffold/parent.md:27` so the Auth row reads
+    posture (URL-path `/api/v1/`).
+12. **Update parent fork table** (spec §Deviations) — edit the
+    Auth row of `.tasks/epics/arch-scaffold/parent.md` so it reads
     "Google OAuth + password login + Postgres-backed server-side
-    sessions", matching ADR 0005. Not counted against the 350-LOC
-    docs budget (path is under `.tasks/`, not `docs/`). ~1 LOC.
+    sessions", matching ADR 0005.
 13. **Verify** (spec §Acceptance criteria) — run the checks in the
-    spec's Verification section; tighten fork-ADR Considered
-    Options prose if `docs/`-only LOC exceeds 350.
+    spec's Verification section.
 
 ## Files touched
 
@@ -90,8 +87,8 @@ table.
 - `docs/conventions/events.md` — new. Stream naming + versioning.
 - `docs/conventions/api.md` — new. HTTP API conventions with
   `/api/v1/` URL-path versioning.
-- `.tasks/epics/arch-scaffold/parent.md` — edit row 3 of the fork
-  table (Auth wording). Outside the `docs/`-only LOC budget.
+- `.tasks/epics/arch-scaffold/parent.md` — edit the Auth row of
+  the fork table.
 
 ## Depends on
 

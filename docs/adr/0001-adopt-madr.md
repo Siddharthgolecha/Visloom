@@ -35,5 +35,6 @@ off document structure.
 
 * Uniform, greppable headers; supersession via the `Status` line.
 * `Considered Options` cannot be silently omitted.
-* ~30 LOC of ceremony per decision — accepted tax.
+* Some ceremony per decision — accepted tax; the review gate
+  keys off the five section headers.
 * Slice 2 (ADRs 0007–0018) exercises this template at volume.

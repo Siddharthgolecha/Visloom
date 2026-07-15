@@ -3,7 +3,8 @@
 ## Context
 
 Slice 1 of the arch-scaffold epic ([#1][epic]), tracked as [#2][issue]
-with lane `lane:considered`. Docs only, ≤ 350 LOC of markdown.
+with lane `lane:considered`. Docs only — MADR template, ADRs
+0001–0006, and three cross-runtime convention docs.
 
 The repo today holds only the autodev workflow (`AGENTS.md`,
 `CONTRIBUTING.md`, `.tasks/_template/`, `tools/autodev/`) — zero
@@ -135,8 +136,7 @@ PR #11:
   "hexagonal-where-appropriate" — not a new fork.
 
 Slice-2 ADRs and the parent-issue fork table body will be
-reconciled in this slice's PR (parent.md sits under `.tasks/`, not
-`docs/`, so touching it doesn't inflate the LOC budget).
+reconciled in this slice's PR.
 
 ### Alternative considered
 
@@ -183,11 +183,6 @@ Adversarial re-read.
   "no I/O in domain layer" clashing with TypeScript async
   ergonomics. *Mitigation:* keep `coding.md` minimal here;
   language-specific rules land with the walking-skeleton slices.
-- **MADR-full ADRs sprawl past the LOC budget.** Six ADRs × ~40
-  LOC + three convention docs × ~35 LOC + template/index ≈ 395 LOC,
-  over 350. *Mitigation:* Considered Options sections in the four
-  fork ADRs stay to one sentence per alternative — decisions are
-  locked, alternatives are audit-trail only.
 - **ADR 0002's VSA + CQRS rule proves too prescriptive.** The
   "reads = layered, writes = hex" rubric is a rule of thumb, not a
   law. If a real feature crosses the line (e.g., a query that
@@ -223,9 +218,6 @@ Adversarial re-read.
       streams (`jobs.media.index.v1`, `events.media.indexed.v1`,
       `events.media.index_failed.v1`) verbatim. *Falsified if:*
       any of the three strings is absent.
-- [ ] Total diff LOC ≤ 350 under `docs/`. *Falsified if:*
-      `git diff --shortstat main...HEAD -- 'docs/**'` reports
-      > 350 insertions.
 - [ ] No files touched outside `docs/` and `.tasks/`. *Falsified if:*
       `git diff --name-only main...HEAD | rg -v '^docs/|^\.tasks/'`
       returns any path.

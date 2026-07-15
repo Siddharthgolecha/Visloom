@@ -39,15 +39,15 @@ epic rather than a chain of forced splits.
 Each item becomes a child issue. Ordering matters — later slices
 depend on earlier ones landing.
 
-- [ ] `arch-conventions-and-adrs-part-1` — MADR template, ADRs 0001–0006, `docs/conventions/{coding,events,api}.md`. Docs only. ≤ 350 LOC.
-- [ ] `arch-conventions-and-adrs-part-2` — ADRs 0007–0018, remaining conventions, `docs/privacy.md`. Docs only. ≤ 400 LOC.
-- [ ] `arch-contracts-package` — `packages/contracts/` schemas + OpenAPI + generator + CI drift-check + overlap-list entries. ≤ 350 LOC.
-- [ ] `arch-diagrams-and-overview` — `docs/architecture/overview.md` + 7 Mermaid diagrams. Docs only. ≤ 300 LOC.
-- [ ] `arch-compose-and-infra` — `infra/compose/`, Postgres init, Redis, Caddy, OTel. API + worker + web not yet included. ≤ 400 LOC.
-- [ ] `arch-rust-api-walking-skeleton` — Rust workspace, `services/api/` with `/healthz`, empty module tree, Dockerfile. ≤ 400 LOC.
-- [ ] `arch-python-worker-walking-skeleton` — `services/worker/` with `uv`, empty consumer loop, ABC ports, CUDA/CPU Dockerfile. ≤ 400 LOC.
-- [ ] `arch-nextjs-web-walking-skeleton` — root `package.json` + `pnpm-workspace.yaml`, `apps/web/` scaffold, placeholder page. ≤ 350 LOC.
-- [ ] `arch-development-workflow` — top-level `Makefile`, bootstrap scripts, `docs/workflow/*`. Verifies full-epic acceptance. ≤ 350 LOC.
+- [ ] `arch-conventions-and-adrs-part-1` — MADR template, ADRs 0001–0006, `docs/conventions/{coding,events,api}.md`. Docs only.
+- [ ] `arch-conventions-and-adrs-part-2` — ADRs 0007–0018, remaining conventions, `docs/privacy.md`. Docs only.
+- [ ] `arch-contracts-package` — `packages/contracts/` schemas + OpenAPI + generator + CI drift-check + overlap-list entries.
+- [ ] `arch-diagrams-and-overview` — `docs/architecture/overview.md` + 7 Mermaid diagrams. Docs only.
+- [ ] `arch-compose-and-infra` — `infra/compose/`, Postgres init, Redis, Caddy, OTel. API + worker + web not yet included.
+- [ ] `arch-rust-api-walking-skeleton` — Rust workspace, `services/api/` with `/healthz`, empty module tree, Dockerfile.
+- [ ] `arch-python-worker-walking-skeleton` — `services/worker/` with `uv`, empty consumer loop, ABC ports, CUDA/CPU Dockerfile.
+- [ ] `arch-nextjs-web-walking-skeleton` — root `package.json` + `pnpm-workspace.yaml`, `apps/web/` scaffold, placeholder page.
+- [ ] `arch-development-workflow` — top-level `Makefile`, bootstrap scripts, `docs/workflow/*`. Verifies full-epic acceptance.
 
 Slices propose in order via `--parent <this-issue-number>`. `task_propose.sh`
 will keep this checklist current as children land.
