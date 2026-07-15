@@ -50,14 +50,14 @@
       row (plan.md #12)
       *[tested-against-real-input]* — `rg -c 'password'
       .tasks/epics/arch-scaffold/parent.md` returns `1`.
-- [ ] Step 13 — Verify (plan.md #13) — **HALTED** pending
-      re-approval on ADR 0005 rewrite (see Deviations §1). All
-      non-0005 acceptance criteria pass; the new 0005-specific
-      bullets need reviewer sign-off.
+- [x] Step 13 — Verify (plan.md #13)
+      *[tested-against-real-input]* — re-approval landed after
+      the ADR 0005 rewrite; all 13 acceptance checks re-run and
+      pass. Evidence in `## Summary` below.
 
 ## Deviations
 
-### 1. Structural — ADR 0005 rewritten mid-implementation (HALTED for re-approval)
+### 1. Structural — ADR 0005 rewritten mid-implementation (RE-APPROVED)
 
 **Cite:** `spec.md` §ADR numbering; §Deviations from parent fork
 table; §Acceptance criteria (new bullets on share-token, roles,
@@ -97,10 +97,10 @@ feedback during implementation (before `task_finish.sh`):
 
 **Structural per `AGENTS.md:107-113`** — the change to ADR
 0005's scope (attendees no longer authenticate, RBAC added) and
-to the parent fork table (Tenancy row) contradict the wording
-frozen at `plan-approved`. **HALTING** here; the reviewer
-decides whether to remove `plan-approved`, re-review, and put
-it back on.
+to the parent fork table (Tenancy row) contradicted the wording
+frozen at the original `plan-approved`. Halted for re-review;
+reviewer re-approved the new scope, so Step 13 verify re-ran
+against the revised acceptance criteria and passed.
 
 ### 2. Non-structural — parent fork-table edits called out on the PR
 
@@ -116,8 +116,8 @@ returns `0`.
 
 ## Summary
 
-**Acceptance-criteria status** (all non-halted criteria pass;
-0005-specific criteria await re-approval per Deviations §1):
+**Acceptance-criteria status** (all 13 checks pass; verified after
+re-approval of the ADR 0005 rewrite):
 
 | Criterion | Status | Evidence |
 |---|---|---|
