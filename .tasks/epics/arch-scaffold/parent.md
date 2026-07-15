@@ -24,7 +24,7 @@ epic rather than a chain of forced splits.
 |---|---|
 | Repo shape | Polyglot monorepo, no meta-tool |
 | Deploy target | Single-VPS Docker Compose (dev + prod overlays) |
-| Auth | Google OAuth + Postgres-backed server-side sessions |
+| Auth | Google OAuth + password login + Postgres-backed server-side sessions |
 | Media scope | Media-abstracted day 1 (photo · video-keyframe) |
 | Tenancy | Photographer-owned events; attendees search via share tokens |
 | Indexing transport | Redis Streams (async, event-driven) |
