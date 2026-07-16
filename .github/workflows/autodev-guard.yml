@@ -16,13 +16,13 @@ jobs:
   guard:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
       - id: paths
         name: Compute path filter
-        uses: dorny/paths-filter@v3
+        uses: dorny/paths-filter@v3.0.2
         with:
           # `non_task` is true whenever the PR touches any file outside .tasks/**.
           # AGENTS.md §8 short-circuits the guard when the diff is task-dir only.
