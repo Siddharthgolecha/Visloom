@@ -213,13 +213,19 @@ RUSTMOD
 
 cat > "$pkg/ts/package.json" <<TS
 {
-  "//": "DO NOT EDIT — regenerate via 'make contracts' (packages/contracts/).",
+  "//": "DO NOT EDIT — regenerate via 'make contracts' (packages/contracts/). Types-only package: json-schema-to-typescript emits interfaces (no runtime code), so we ship .ts sources under an exports map. Slice 8's web build compiles them at consumption time.",
   "name": "@visloom/contracts",
   "version": "$version",
-  "description": "Generated TypeScript bindings for Visloom event schemas.",
+  "description": "Generated TypeScript types for Visloom event schemas. Types-only — no runtime bindings.",
   "type": "module",
-  "main": "events/_envelope.v1.js",
-  "types": "events/_envelope.v1.d.ts",
+  "types": "./events/_envelope.v1.ts",
+  "exports": {
+    ".": "./events/_envelope.v1.ts",
+    "./events/envelope": "./events/_envelope.v1.ts",
+    "./events/jobs.media.index.v1": "./events/jobs.media.index.v1.ts",
+    "./events/media.indexed.v1": "./events/events.media.indexed.v1.ts",
+    "./events/media.index_failed.v1": "./events/events.media.index_failed.v1.ts"
+  },
   "files": ["events"],
   "private": true
 }
