@@ -119,11 +119,11 @@ jobs:
           if [[ ",$labels," != *",lane:quick,"* ]]; then
             exit 0
           fi
-          # Overlap list: currently empty per AGENTS.md §6. When entries land,
-          # match them here and hard-fail if a Quick PR touches one.
-          overlap_hits=""
-          # Example (uncomment when a schema stabilizes):
-          # overlap_hits="$(grep -E '^schemas/.*\.ts$' "$RUNNER_TEMP/pr_files.txt" || true)"
+          # Overlap list (AGENTS.md §6). Hard-fail when a Quick PR
+          # touches a stabilized public interface — those need Spec.
+          overlap_hits="$(grep -E \
+            '^(packages/contracts/|scripts/gen-contracts\.sh$|\.github/workflows/contracts\.yml$)' \
+            "$RUNNER_TEMP/pr_files.txt" || true)"
           if [[ -n "$overlap_hits" ]]; then
             echo "::error::Quick-lane PR touches overlap-list files — restart in Spec lane (AGENTS.md §4)."
             echo "$overlap_hits"

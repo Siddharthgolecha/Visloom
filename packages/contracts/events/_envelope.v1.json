@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://visloom/contracts/events/_envelope.v1.json",
+  "title": "EventEnvelopeV1",
+  "description": "Common envelope for every Redis Stream message per docs/conventions/events.md. Per-stream schemas $ref this and override `data`.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["event_id", "traceparent", "trace_id", "occurred_at", "data"],
+  "properties": {
+    "event_id": {
+      "description": "ULID identifying this specific message.",
+      "type": "string",
+      "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$"
+    },
+    "traceparent": {
+      "description": "W3C Trace Context traceparent header value, propagation vehicle per ADR 0015.",
+      "type": "string",
+      "pattern": "^[0-9a-f]{2}-[0-9a-f]{32}-[0-9a-f]{16}-[0-9a-f]{2}$"
+    },
+    "tracestate": {
+      "description": "Optional W3C tracestate value, present when the originating request had one.",
+      "type": "string"
+    },
+    "trace_id": {
+      "description": "The 32-hex trace-id segment of `traceparent`. Log-only convenience per events.md:57-59; never used for propagation.",
+      "type": "string",
+      "pattern": "^[0-9a-f]{32}$"
+    },
+    "occurred_at": {
+      "description": "ISO-8601 / RFC 3339 timestamp in UTC.",
+      "type": "string",
+      "format": "date-time"
+    },
+    "data": {
+      "description": "Per-stream payload. Stream schemas override with a concrete object shape.",
+      "type": "object"
+    }
+  }
+}

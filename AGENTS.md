@@ -238,13 +238,35 @@ GitHub UI (or Terraform later), not in a repo file.
 
 ## 6. Overlap list
 
-Soft list (not CI-enforced) — if your plan touches any of these, run
-`gh pr list --search 'is:draft'` before requesting `plan-approved` and
-skim for overlap. If you see a conflict, comment on that PR and pause.
+Soft for review — if your plan touches any of these, run
+`gh pr list --search 'is:draft'` before requesting `plan-approved`
+and skim for overlap. If you see a conflict, comment on that PR and
+pause. CI enforces the file-path entries below via
+[`autodev-guard.yml`](.github/workflows/autodev-guard.yml) — a
+Quick-lane PR touching any of them hard-fails.
 
-*No overlap-list files yet.* Add entries as public interfaces
-stabilize — e.g., CLI flags, output schemas, shared type definitions,
-API contracts, workflow YAMLs under `.github/workflows/`.
+Current entries — CI-enforced:
+
+- `packages/contracts/**` — any change to a schema, OpenAPI spec,
+  `schema.sql`, or the generator script requires Spec lane per
+  ADR 0011.
+- `scripts/gen-contracts.sh` — the codegen driver. Toolchain
+  version pins live here; a bump reruns codegen against every
+  target and lands as a single Spec-lane PR.
+- `.github/workflows/contracts.yml` — the drift-check workflow.
+  Touching its trigger, matrix, or toolchain versions is a
+  Spec-lane change.
+
+Soft entries (human review only — greps for these substrings have
+too many false positives to gate CI on):
+
+- Event stream names: `jobs.media.index.v1`,
+  `events.media.indexed.v1`, `events.media.index_failed.v1`
+  (per ADR 0006). New streams must land with schemas under
+  `packages/contracts/events/` in the same PR.
+- Stream-name grammar `.v<int>` suffix (per ADR 0006 + ADR 0017).
+  A `.v<N+1>` bump is a Spec-lane PR that adds a new schema file
+  next to the old one; never edits the old in place.
 
 ---
 

@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://visloom/contracts/events/events.media.indexed.v1.json",
+  "title": "EventsMediaIndexedV1",
+  "description": "Worker → API: media indexing succeeded, embedding stored. Stream `events.media.indexed.v1` per docs/conventions/events.md:27.",
+  "allOf": [{"$ref": "_envelope.v1.json"}],
+  "unevaluatedProperties": false,
+  "properties": {
+    "data": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["media_id", "embedding_ref", "frames", "embedder_model_id", "embedder_version"],
+      "properties": {
+        "media_id": {
+          "description": "ULID matching the `media_id` on the originating `jobs.media.index.v1` message.",
+          "type": "string",
+          "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$"
+        },
+        "embedding_ref": {
+          "description": "Opaque pointer into the pgvector column populated per ADR 0009. Encoding decided by slice 6/9.",
+          "type": "string",
+          "minLength": 1
+        },
+        "frames": {
+          "description": "Number of embedded frames — 1 for photo, N for video-keyframe per ADR 0007:48-54.",
+          "type": "integer",
+          "minimum": 1
+        },
+        "embedder_model_id": {
+          "description": "Same field name as `/healthz` `embedder.model_id` (api.md:19-20) to avoid naming drift between control-plane and data-plane.",
+          "type": "string",
+          "minLength": 1
+        },
+        "embedder_version": {
+          "description": "Same field name as `/healthz` `embedder.version`.",
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    }
+  }
+}
