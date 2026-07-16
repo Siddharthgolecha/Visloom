@@ -75,9 +75,11 @@
       rest, log retention window, deletion-on-request, deletion
       SLA, IP-log posture, cross-border data transfer). Cited by
       ADR 0015.
-- [x] Step 20 — Verify (plan.md #20)
-      *[tested-against-real-input]* — all 10 acceptance checks
-      pass. Evidence in `## Summary` below.
+- [ ] Step 20 — Verify (plan.md #20) — **HALTED** pending
+      re-approval of the widened spec/plan (Deviations §2).
+      All 10 acceptance checks pass under the widened criterion
+      (evidence in `## Summary`), but the widening itself needs
+      the reviewer's sign-off before Step 20 counts as done.
 
 ## Deviations
 
@@ -115,12 +117,19 @@ payload shape updated to match.
 in `fb4b3f3`), so editing it here re-scopes the frozen
 acceptance criterion "Only `docs/adr/README.md` is edited among
 existing files." Spec.md §Acceptance criteria and plan.md
-§Files touched were both updated in this same commit to name
-`events.md` as the second permitted existing-file edit; the
-new wording states the reviewer-request rationale so the audit
-trail is explicit. Not asking for `plan-approved` removal —
-the criterion widened to accommodate a fix the reviewer
-explicitly requested, and the widening is documented in-artifact.
+§Files touched were both updated in commit `333d564` to name
+`events.md` as the second permitted existing-file edit.
+
+~~Initial handling: kept `plan-approved` and flagged the
+widening in-artifact.~~ **Corrected on reviewer instruction:**
+per `AGENTS.md` §5 step 7, a post-approval change to an
+acceptance criterion is a structural deviation that must HALT
+for re-approval — widening the frozen spec/plan while keeping
+the label is not allowed, even when the widening is downstream
+of a reviewer request. `plan-approved` removed on this pass;
+the revised spec.md/plan.md/events.md/ADR 0015 wording is now
+under review under this new commit and waits for the label to
+return.
 
 ### 3. ADR 0016 session cache invalidation on revocation
 
@@ -164,7 +173,7 @@ opt-in.
 | 7 | `docs/privacy.md` has `## Deferred (needs product input)` + ≥3 bullets | 6 bullets |
 | 8 | `docs/privacy.md` no forbidden new-commitment strings outside `## Deferred` | grep-clean on "encryption at rest", "retention window", "deletion within", time SLAs |
 | 9 | `docs/privacy.md` cited by ≥1 ADR | ADR 0015 cites it |
-| 10 | Only `docs/adr/README.md` edited among existing files | `git diff --name-only --diff-filter=M` returns just that path |
+| 10 | Only `docs/adr/README.md` and `docs/conventions/events.md` edited among existing files (widened per Deviations §2) | `git diff --name-only --diff-filter=M main...HEAD -- 'docs/**'` returns exactly these two paths |
 
 **Trust tiers:** every `docs/**` entry is `untested-assumption` —
 markdown has no runtime and the decisions get exercised in slices
