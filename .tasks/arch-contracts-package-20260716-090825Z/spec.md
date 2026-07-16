@@ -118,13 +118,6 @@ Kept in-spec as append-only audit trail per `AGENTS.md:34-36`.
    Alternative: ship a stub root `Makefile` in slice 3 that
    only carries the `contracts` forwarder, which slice 9 then
    subsumes.
-   *Proposed:* one shared subschema at
-   `packages/contracts/events/_envelope.v1.json`; the three stream
-   schemas `$ref` its properties and override only `data`.
-   Alternative: inline the envelope into each stream schema (three
-   copies). Chosen over inline because an ADR-0015 payload
-   evolution (e.g. adding `baggage`) is a one-file edit — not a
-   three-file edit prone to drift.
 
 ## Research findings
 
