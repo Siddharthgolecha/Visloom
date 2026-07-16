@@ -1,0 +1,11 @@
+{
+  "//": "DO NOT EDIT — regenerate via 'make contracts' (packages/contracts/).",
+  "name": "@visloom/contracts",
+  "version": "0.1.0",
+  "description": "Generated TypeScript bindings for Visloom event schemas.",
+  "type": "module",
+  "main": "events/_envelope.v1.js",
+  "types": "events/_envelope.v1.d.ts",
+  "files": ["events"],
+  "private": true
+}

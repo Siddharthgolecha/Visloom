@@ -1,0 +1,11 @@
+# DO NOT EDIT — regenerate via `make contracts` (packages/contracts/).
+# Manifest for the generated Pydantic bindings under visloom_contracts/.
+[project]
+name = "visloom-contracts"
+version = "0.1.0"
+description = "Generated Pydantic v2 bindings for Visloom event schemas."
+requires-python = ">=3.12"
+dependencies = ["pydantic>=2,<3"]
+
+[tool.setuptools.packages.find]
+include = ["visloom_contracts*"]

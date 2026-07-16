@@ -1,0 +1,116 @@
+openapi: 3.1.0
+info:
+  title: Visloom API
+  version: 0.1.0
+  description: |
+    Slice-3 skeleton — declares only `/healthz` today plus the
+    shared components (error envelope, health response, idempotency
+    parameter, status-code responses) that slice 6 operations will
+    `$ref`. Base path for future application routes is `/api/v1/`
+    per docs/conventions/api.md.
+servers:
+  - url: /api/v1
+    description: Default server for application routes. Slice 6 lands the first operations.
+  - url: /
+    description: Root server. Used for unversioned health probes (`/healthz`, later `/readyz`).
+paths:
+  /healthz:
+    get:
+      summary: Liveness probe
+      description: Public, unauthenticated. Body shape per docs/conventions/api.md:19-20.
+      operationId: getHealth
+      servers:
+        - url: /
+      responses:
+        "200":
+          description: Service is up.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+components:
+  schemas:
+    ErrorEnvelope:
+      type: object
+      description: Wire error envelope per docs/conventions/api.md:25-33. `code` is stable and machine-readable; `message` may change.
+      additionalProperties: false
+      required: [error]
+      properties:
+        error:
+          type: object
+          additionalProperties: false
+          required: [code, message, trace_id]
+          properties:
+            code:
+              type: string
+              description: Stable machine-readable identifier.
+            message:
+              type: string
+              description: Human-readable summary; may change between releases.
+            trace_id:
+              type: string
+              description: 32-hex trace-id for support lookup (matches events envelope).
+              pattern: "^[0-9a-f]{32}$"
+    HealthResponse:
+      type: object
+      description: Body of `GET /healthz` per docs/conventions/api.md:19-20.
+      additionalProperties: false
+      required: [status, embedder]
+      properties:
+        status:
+          type: string
+          enum: [ok]
+        embedder:
+          type: object
+          additionalProperties: false
+          required: [model_id, version]
+          properties:
+            model_id:
+              type: string
+            version:
+              type: string
+  parameters:
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      description: Client-generated ULID per docs/conventions/api.md:35-39. Required on mutating operations; storage lands in slice 6.
+      schema:
+        type: string
+        pattern: "^[0-9A-HJKMNP-TV-Z]{26}$"
+  responses:
+    NotFound:
+      description: Resource not found.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorEnvelope"
+    Conflict:
+      description: Conflicts with current state.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorEnvelope"
+    Unprocessable:
+      description: Semantic validation failed.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorEnvelope"
+    RateLimited:
+      description: Rate limit exceeded.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorEnvelope"
+    Internal:
+      description: Internal server error.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorEnvelope"
+    Unavailable:
+      description: Upstream dependency unavailable.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorEnvelope"

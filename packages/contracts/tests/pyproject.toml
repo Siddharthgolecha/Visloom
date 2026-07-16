@@ -1,0 +1,16 @@
+# Contract-tier test package. Runs schema self-validation, example
+# round-trip, envelope $ref, redocly lint, and schema.sql/JSON enum
+# parity checks. Deps pinned via uv.lock per ADR 0012.
+[project]
+name = "visloom-contracts-tests"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = [
+    "pytest==9.1.1",
+    "jsonschema==4.26.0",
+    "referencing==0.36.2",
+    "pyyaml==6.0.3",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["."]

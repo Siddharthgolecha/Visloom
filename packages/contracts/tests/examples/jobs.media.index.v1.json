@@ -1,0 +1,13 @@
+{
+  "event_id": "M087QNW2D06G06MH7JS0SPA4YA",
+  "traceparent": "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01",
+  "trace_id": "4bf92f3577b34da6a3ce929d0e0e4736",
+  "occurred_at": "2026-07-16T09:15:00Z",
+  "data": {
+    "media_id": "23VKSQHZCHTKVJP1792738MBB6",
+    "media_kind": "photo",
+    "source_uri": "s3://visloom-media/originals/23VKSQHZCHTKVJP1792738MBB6.jpg",
+    "owner_account_id": "8XMK5Q5CZMHNTR71A86YWAMCXE",
+    "event_id_ref": "87H8JWC7ZG213MSD2CZGZV0QNH"
+  }
+}

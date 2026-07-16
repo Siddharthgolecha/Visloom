@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://visloom/contracts/events/events.media.index_failed.v1.json",
+  "title": "EventsMediaIndexFailedV1",
+  "description": "Worker → API: media indexing failed. Stream `events.media.index_failed.v1` per docs/conventions/events.md:29.",
+  "allOf": [{"$ref": "_envelope.v1.json"}],
+  "unevaluatedProperties": false,
+  "properties": {
+    "data": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["media_id", "failure", "retry"],
+      "properties": {
+        "media_id": {
+          "description": "ULID matching the `media_id` on the originating `jobs.media.index.v1` message.",
+          "type": "string",
+          "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$"
+        },
+        "failure": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["code", "message"],
+          "properties": {
+            "code": {
+              "description": "Stable, machine-readable failure code (posture per errors.md:16-19). New codes are additive per §SemVer.",
+              "type": "string",
+              "enum": ["unreadable_source", "unsupported_kind", "embedder_error", "internal"]
+            },
+            "message": {
+              "description": "Human-readable failure message. Non-PII per errors.md:36-37.",
+              "type": "string"
+            }
+          }
+        },
+        "retry": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["attempt", "next_at"],
+          "properties": {
+            "attempt": {
+              "description": "1-indexed retry counter for consumer log correlation.",
+              "type": "integer",
+              "minimum": 1
+            },
+            "next_at": {
+              "description": "RFC 3339 timestamp of the next scheduled retry, or null when the worker gives up.",
+              "type": ["string", "null"],
+              "format": "date-time"
+            }
+          }
+        }
+      }
+    }
+  }
+}

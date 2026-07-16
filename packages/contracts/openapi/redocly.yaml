@@ -1,0 +1,19 @@
+extends:
+  - recommended
+
+# Slice 3's OpenAPI is a skeleton — it declares only `/healthz` plus
+# components (error envelope, status-code responses, IdempotencyKey)
+# reserved for slice 6 to `$ref` when the first `/api/v1/*`
+# operations arrive. Rules suppressed here are the ones that only
+# make sense once operations exist.
+rules:
+  # Components exist for slice 6 to $ref — expected unused today.
+  no-unused-components: off
+  # `/healthz` is deliberately unauthenticated per api.md:19-20.
+  security-defined: off
+  # `/healthz` documents only 200 at this slice; no error responses
+  # authored until slice 6.
+  operation-4xx-response: off
+  # License posture not decided in the docs surface yet — defer to
+  # product; add when a decision lands.
+  info-license: off

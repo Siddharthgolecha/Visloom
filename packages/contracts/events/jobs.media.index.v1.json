@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://visloom/contracts/events/jobs.media.index.v1.json",
+  "title": "JobsMediaIndexV1",
+  "description": "API → worker: please index this media. Stream `jobs.media.index.v1` per docs/conventions/events.md:26.",
+  "allOf": [{"$ref": "_envelope.v1.json"}],
+  "unevaluatedProperties": false,
+  "properties": {
+    "data": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["media_id", "media_kind", "source_uri", "owner_account_id", "event_id_ref"],
+      "properties": {
+        "media_id": {
+          "description": "ULID primary key of the media row.",
+          "type": "string",
+          "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$"
+        },
+        "media_kind": {
+          "description": "Media discriminator per ADR 0007.",
+          "type": "string",
+          "enum": ["photo", "video"]
+        },
+        "source_uri": {
+          "description": "Opaque URI the worker reads media bytes from. Object-store layout is deferred to slice 5 per ADR 0007:53-57.",
+          "type": "string",
+          "format": "uri"
+        },
+        "owner_account_id": {
+          "description": "ULID of the account that initiated indexing (RBAC principal per ADR 0005).",
+          "type": "string",
+          "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$"
+        },
+        "event_id_ref": {
+          "description": "ULID of the tenant event this media belongs to (ADR 0008:44-49). Named `_ref` to disambiguate from the envelope's `event_id` (message identity).",
+          "type": "string",
+          "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$"
+        }
+      }
+    }
+  }
+}

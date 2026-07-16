@@ -1,0 +1,76 @@
+name: contracts
+
+# Drift-check + contract tests for packages/contracts/ per ADR 0011.
+# Runs on any PR/main-push that touches the package or the generator
+# script. Path-filtered to skip pure docs/task-dir changes.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      contracts: ${{ steps.filter.outputs.contracts }}
+    steps:
+      - uses: actions/checkout@v5
+      - id: filter
+        uses: dorny/paths-filter@v3.0.2
+        with:
+          filters: |
+            contracts:
+              - 'packages/contracts/**'
+              - 'scripts/gen-contracts.sh'
+              - '.github/workflows/contracts.yml'
+
+  drift:
+    needs: changes
+    if: needs.changes.outputs.contracts == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: packages/contracts
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install uv (pinned)
+        uses: astral-sh/setup-uv@v3
+        with:
+          version: '0.11.7'
+          enable-cache: true
+
+      - name: Set up Rust (stable)
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+
+      - name: Cache cargo-typify
+        uses: actions/cache@v4
+        with:
+          path: ~/.cargo/bin/cargo-typify
+          key: cargo-typify-${{ hashFiles('scripts/gen-contracts.sh') }}
+
+      - name: Set up Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Regenerate contracts
+        run: make contracts
+
+      - name: Assert no drift in generated trees
+        run: git diff --exit-code -- ts rust py
+
+      - name: Run contract tests
+        run: make test

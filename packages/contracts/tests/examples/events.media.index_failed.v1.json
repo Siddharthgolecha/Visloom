@@ -1,0 +1,17 @@
+{
+  "event_id": "91WY2F2RR4FH8VD6HQ69ZMEG37",
+  "traceparent": "00-4bf92f3577b34da6a3ce929d0e0e4736-e0ba4d6c1a72f931-01",
+  "trace_id": "4bf92f3577b34da6a3ce929d0e0e4736",
+  "occurred_at": "2026-07-16T09:15:20Z",
+  "data": {
+    "media_id": "23VKSQHZCHTKVJP1792738MBB6",
+    "failure": {
+      "code": "unreadable_source",
+      "message": "source_uri returned HTTP 404"
+    },
+    "retry": {
+      "attempt": 1,
+      "next_at": "2026-07-16T09:16:20Z"
+    }
+  }
+}
