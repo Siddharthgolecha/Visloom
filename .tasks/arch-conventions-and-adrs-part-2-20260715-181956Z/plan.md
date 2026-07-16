@@ -168,7 +168,14 @@ New:
 Edited:
 
 - `docs/adr/README.md` — append twelve rows to the index table
-  (step 13). **Sole existing-file edit in this PR.**
+  (step 13).
+- `docs/conventions/events.md` — reword `## Payload shape` to
+  reflect ADR 0015's trace-propagation contract
+  (`traceparent`/`tracestate` are the propagation vehicles;
+  `trace_id` is derived, log-only). Added post-`plan-approved`
+  to fix a reviewer finding — see implementation.md Deviations
+  §2. Reflects the ADR's payload-shape decision; no new
+  content, only replacing the placeholder `trace_id` line.
 
 ## Depends on
 

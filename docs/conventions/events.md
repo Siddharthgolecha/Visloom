@@ -44,6 +44,20 @@ Never carry incompatible payloads on the same stream.
 
 ## Payload shape
 
-Every message carries `event_id` (ULID), `trace_id` (from the
-originating request), `occurred_at` (ISO-8601 UTC), and `data`.
+Every message carries:
+
+* `event_id` — ULID.
+* `traceparent` — serialized W3C trace context from the
+  originating request (per ADR
+  [0015](../adr/0015-observability-otel-first.md); this is the
+  propagation vehicle so downstream spans can attach as
+  children).
+* `tracestate` — optional W3C tracestate string, present when
+  the originating request had one.
+* `trace_id` — derived from `traceparent`, kept as a log-only
+  convenience for structured search. Never used for
+  propagation.
+* `occurred_at` — ISO-8601 UTC.
+* `data` — the payload for the specific stream.
+
 Schemas + generated types land in slice 3.

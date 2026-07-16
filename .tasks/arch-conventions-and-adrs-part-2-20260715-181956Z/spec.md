@@ -323,8 +323,12 @@ Every criterion automated-or-observable with a falsifier.
 - [ ] `docs/privacy.md` is cited by at least one ADR landing in
   this PR. *Falsified if:* `grep -R 'docs/privacy.md\|privacy
   posture' docs/adr/*.md` returns zero hits.
-- [ ] Only `docs/adr/README.md` is edited among existing files.
-  *Falsified if:* `git diff --name-only main...HEAD | rg -v
-  '^docs/|^\.tasks/'` returns any path, **or** any existing file
-  other than `docs/adr/README.md` shows up under `git diff
-  --name-only --diff-filter=M main...HEAD -- 'docs/**'`.
+- [ ] Only `docs/adr/README.md` and `docs/conventions/events.md`
+  are edited among existing files. `README.md` is the index-row
+  edit; `events.md` reflects the payload-shape change ADR 0015
+  requires (per implementation.md Deviations §2 — reviewer-
+  requested, structural). *Falsified if:* `git diff --name-only
+  main...HEAD | rg -v '^docs/|^\.tasks/'` returns any path,
+  **or** any existing file other than these two shows up under
+  `git diff --name-only --diff-filter=M main...HEAD --
+  'docs/**'`.

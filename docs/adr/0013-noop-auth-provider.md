@@ -38,21 +38,31 @@ having no fallback at all.
 
 ## Decision Outcome
 
-Chosen: **`VISLOOM_ENV=dev` gate with startup assertion.**
+Chosen: **`VISLOOM_ENV=dev` gate with startup assertion. Unset
+= not dev.**
 
-* At API startup, the `AuthProvider` selection reads
-  `VISLOOM_ENV`. If unset or `dev`, and no real OAuth or
-  password credentials are configured, `NoopAuthProvider` is
-  selected.
-* If `NoopAuthProvider` is selected AND `VISLOOM_ENV` is
-  anything other than `dev` (or unset), the API **panics at
-  startup** with a message pointing at this ADR. It does not
-  boot in a degraded state.
-* Noop is not selectable when real credentials **are**
-  configured, regardless of `VISLOOM_ENV` — the real provider
-  wins.
-* The chosen provider is logged at startup (one line, INFO
-  level) so operators see which provider is live.
+Rules, evaluated in order at API startup:
+
+1. **If real OAuth or password credentials are configured**, the
+   real provider is selected. `NoopAuthProvider` is unreachable
+   in this case, regardless of `VISLOOM_ENV`.
+2. **Otherwise, if `VISLOOM_ENV` is exactly the string `"dev"`**,
+   `NoopAuthProvider` is selected. Any other value — including
+   unset, empty string, `"prod"`, `"staging"`, or a typo like
+   `"development"` — proceeds to rule 3.
+3. **Otherwise, the API panics at startup** with a message
+   pointing at this ADR. It does not boot in a degraded state,
+   and it does not fall back to Noop.
+
+Rationale for unset = panic: production Docker images that
+forgot to set `VISLOOM_ENV` are the highest-risk failure mode —
+a silent "Noop" default would authenticate every request as
+`dev` in prod. Requiring `VISLOOM_ENV=dev` to be an **explicit,
+opt-in** string means the dev fallback is impossible to reach
+by accident.
+
+The chosen provider is logged at startup (one line, INFO
+level) so operators see which provider is live.
 
 ## Consequences
 

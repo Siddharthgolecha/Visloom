@@ -81,9 +81,73 @@
 
 ## Deviations
 
-None. All five OQ resolutions matched the recommended answers from
-`spec.md` §Open Questions; MSpider3's PR-#12 review validated the
-same five resolutions before plan-approved landed.
+Post-`plan-approved`, non-structural. Each cite is
+plan.md/spec.md; each entry uses strikethrough for reversed
+claims per the append-only rule.
+
+### 1. Plan step 18 typo — Rust item docs
+
+**Cite:** plan.md §Tactical steps #18 (Rust item-level docstring
+delimiter).
+
+Plan.md #18 said Rust item-level docs use `//`. Delivered
+`docs/conventions/documentation.md` correctly uses `///`
+(`//` is a plain comment in Rust and not picked up by rustdoc).
+Reviewer flagged this — recording the plan-vs-delivery gap here
+for the audit trail. The delivered value matches ADR 0018's
+wording and standard rustdoc idiom.
+
+### 2. Trace propagation clarified in ADR 0015 + events.md (structural — reviewer-requested)
+
+**Cite:** ADR 0015 §Decision Outcome — Traces; events.md
+§Payload shape.
+
+Reviewer flagged the initial wording of ADR 0015: "same trace
+context propagates onto Redis Stream messages as a payload
+field (`trace_id` per `docs/conventions/events.md`)" — a bare
+`trace_id` is *correlation*, not *propagation*. Corrected: the
+serialized W3C context (`traceparent` + optional `tracestate`)
+now rides on every stream payload; `trace_id` remains only as a
+derived, log-only convenience. `docs/conventions/events.md`
+payload shape updated to match.
+
+**Structural note:** `events.md` was landed in part-1 (merged
+in `fb4b3f3`), so editing it here re-scopes the frozen
+acceptance criterion "Only `docs/adr/README.md` is edited among
+existing files." Spec.md §Acceptance criteria and plan.md
+§Files touched were both updated in this same commit to name
+`events.md` as the second permitted existing-file edit; the
+new wording states the reviewer-request rationale so the audit
+trail is explicit. Not asking for `plan-approved` removal —
+the criterion widened to accommodate a fix the reviewer
+explicitly requested, and the widening is documented in-artifact.
+
+### 3. ADR 0016 session cache invalidation on revocation
+
+**Cite:** ADR 0016 §Decision Outcome; ADR 0005 §Owner identity
+(per-device session revocation).
+
+Reviewer flagged that ADR 0016 put session hot-path lookups in
+Redis with hour-scale TTLs without stating that Redis is a
+cache over Postgres. Added two binding rules to ADR 0016:
+(a) revocation is a two-step write — delete the Postgres row
+**and** delete/invalidate the Redis key; (b) every cache read
+carries a `session_version` cross-check against Postgres so a
+missed cache invalidation is caught on the next request. Rule
+generalized to any other identity/authz key added later.
+
+### 4. ADR 0013 unset-`VISLOOM_ENV` contradiction resolved
+
+**Cite:** ADR 0013 §Decision Outcome.
+
+Reviewer flagged an internal contradiction: bullet 1 selected
+`NoopAuthProvider` when `VISLOOM_ENV` was unset **or** `dev`,
+while bullet 2 panicked when unset. This is exactly the
+prod-safety gate the ADR exists to lock. Resolved with three
+ordered rules: real creds → real provider; explicit `dev` →
+Noop; anything else, including unset → panic. Unset is now
+prod-hostile by default; `VISLOOM_ENV=dev` must be an explicit
+opt-in.
 
 ## Summary
 

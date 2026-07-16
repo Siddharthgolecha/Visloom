@@ -56,11 +56,26 @@ config, not a code constant.
 
 ### Decision Outcome — Traces
 
-W3C `traceparent` header on every HTTP request; the same trace
-context propagates onto Redis Stream messages as a payload
-field (`trace_id` per `docs/conventions/events.md`). Spans
-follow the `application/` handler boundary — one span per
-handler, adapters open child spans.
+W3C context propagates end-to-end: `traceparent` on every HTTP
+request, and — because Redis Streams messages are the second
+transport hop (API → worker per ADR 0006) — the **serialized
+W3C context** rides on every stream payload as a `traceparent`
+field, with an optional `tracestate` field when set. A bare
+`trace_id` is *correlation*, not propagation: it lets a log
+line find its trace, but it cannot restore parent/span context,
+so the worker's spans would appear as orphaned roots instead of
+children of the API's request span. `traceparent` + optional
+`tracestate` is the OTel-canonical minimum for cross-service
+context.
+
+`trace_id` may still appear as a derived, log-only convenience
+(e.g. structured log records include the extracted `trace_id`
+so log-side search works without parsing `traceparent`), but it
+is never the propagation vehicle.
+
+Spans follow the `application/` handler boundary — one span per
+handler, adapters open child spans. `docs/conventions/events.md`
+carries the exact payload-field names and the injection rule.
 
 ### Decision Outcome — Metrics
 

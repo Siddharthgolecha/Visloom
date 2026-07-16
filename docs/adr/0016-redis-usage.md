@@ -58,6 +58,29 @@ TTL taxonomy.**
 * Every key **must** have an explicit TTL — no bare `SET`
   without expiry. Enforced by review + a lint check
   (candidate for slice 6 / slice 7 tooling).
+* **Sessions in Redis are a cache over Postgres, not the source
+  of truth.** ADR [0005](0005-owner-auth-and-rbac.md) commits
+  server-side sessions in Postgres and requires per-device
+  revocation. Redis holds a hot-path lookup only. Two rules
+  follow, both binding on slice 6's implementation:
+  * **Revocation is a two-step write:** delete the Postgres row
+    **and** delete (or invalidate) the Redis key. Deleting only
+    the Postgres row leaves a session that continues to
+    authenticate until the cache TTL runs out — that is the
+    exact failure mode we're avoiding.
+  * **Every cache read carries a version cross-check.** The
+    cached value includes the Postgres row's monotonic
+    `session_version` (or equivalent). On lookup, if the
+    Postgres version differs from the cache, treat the cache as
+    stale and refetch. This is the belt to the revocation
+    suspenders — a missed cache-invalidation is caught on the
+    next request instead of persisting for hours.
+* The same "cache over Postgres, invalidate on write, version-
+  check on read" rule applies to any other identity- or
+  authorization-shaped key added to Redis later
+  (`event_memberships` lookups, share-token validation).
+  Rate-limit counters and magic-link tokens are Redis-native
+  (no Postgres row) and don't need this treatment.
 
 ## Consequences
 
@@ -70,6 +93,8 @@ TTL taxonomy.**
   `docs/conventions/data.md` has a `## Deferred` section
   pointing at that ADR.
 * Downstream: slice 5 brings up the Redis service; slice 6
-  uses the `session` and `ratelimit` key classes; slice 7
-  uses the `jobs.*` streams (per ADR 0006) alongside any
-  worker-local scratch keys under `vloom:worker:...`.
+  uses the `session` and `ratelimit` key classes and
+  implements the two-step revocation + version-check contract
+  above; slice 7 uses the `jobs.*` streams (per ADR 0006)
+  alongside any worker-local scratch keys under
+  `vloom:worker:...`.
