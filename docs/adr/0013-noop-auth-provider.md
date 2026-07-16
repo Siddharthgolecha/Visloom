@@ -38,31 +38,56 @@ having no fallback at all.
 
 ## Decision Outcome
 
-Chosen: **`VISLOOM_ENV=dev` gate with startup assertion. Unset
-= not dev.**
+Chosen: **`VISLOOM_ENV=dev` gate, enforced twice.** Startup
+selection guard **and** a constructor-level guard inside
+`NoopAuthProvider` itself. Unset ≠ dev; the check is
+case-sensitive, exact-match.
+
+### Selection guard (at boot)
 
 Rules, evaluated in order at API startup:
 
 1. **If real OAuth or password credentials are configured**, the
    real provider is selected. `NoopAuthProvider` is unreachable
-   in this case, regardless of `VISLOOM_ENV`.
-2. **Otherwise, if `VISLOOM_ENV` is exactly the string `"dev"`**,
-   `NoopAuthProvider` is selected. Any other value — including
-   unset, empty string, `"prod"`, `"staging"`, or a typo like
-   `"development"` — proceeds to rule 3.
+   through this path, regardless of `VISLOOM_ENV`.
+2. **Otherwise, if `VISLOOM_ENV` is exactly the string `"dev"`**
+   (byte-for-byte, no case-fold, no whitespace trim),
+   `NoopAuthProvider::new()` is called and the resulting
+   provider is selected. Any other value — including unset,
+   empty string, `"DEV"`, `" dev"`, `"prod"`, `"staging"`, or a
+   typo like `"development"` — proceeds to rule 3.
 3. **Otherwise, the API panics at startup** with a message
-   pointing at this ADR. It does not boot in a degraded state,
-   and it does not fall back to Noop.
+   naming (a) which env var was read, (b) the observed value
+   (or "unset"), and (c) a link back to this ADR. It does not
+   boot in a degraded state, and it does not fall back to Noop.
 
-Rationale for unset = panic: production Docker images that
-forgot to set `VISLOOM_ENV` are the highest-risk failure mode —
-a silent "Noop" default would authenticate every request as
-`dev` in prod. Requiring `VISLOOM_ENV=dev` to be an **explicit,
-opt-in** string means the dev fallback is impossible to reach
-by accident.
+### Constructor guard (defense in depth)
 
-The chosen provider is logged at startup (one line, INFO
-level) so operators see which provider is live.
+`NoopAuthProvider::new()` re-runs the same `VISLOOM_ENV=="dev"`
+check and panics on mismatch. This exists for the case where
+slice 6 code (or a test, or a future refactor) instantiates
+`NoopAuthProvider` directly without going through the selection
+guard above — the constructor refuses. Same panic message
+shape. Cost is one env-var read per construction; benefit is
+that there is no code path in the API that can produce a live
+`NoopAuthProvider` outside `VISLOOM_ENV=dev`.
+
+The selected provider is logged at startup (one line, INFO
+level) so operators can observe which one is live: for Noop,
+the log line explicitly includes the string `"NoopAuthProvider
+active — VISLOOM_ENV=dev"` so `grep`-based prod-readiness
+checks can flag it.
+
+### Rationale
+
+Two-layer guard because production Docker images that forgot to
+set `VISLOOM_ENV` are the highest-risk failure mode: a silent
+"Noop" default would authenticate every request as `dev`. The
+selection guard closes the intended path; the constructor guard
+closes the unintended one (accidental direct instantiation).
+Together they make it impossible to boot a live
+`NoopAuthProvider` outside an explicitly opted-in dev
+environment.
 
 ## Consequences
 
@@ -73,6 +98,10 @@ level) so operators see which provider is live.
   — Noop is unreachable.
 * Prod misconfiguration (real creds forgotten, `VISLOOM_ENV`
   still `prod`): API refuses to boot. Loud > quiet-degraded.
-* Downstream: slice 6 (Rust API) implements the boot-time
-  provider selection, the startup panic on env mismatch, and
-  the one-line log.
+* Downstream: slice 6 (Rust API) implements **both** the
+  boot-time selection guard and the constructor-level guard
+  inside `NoopAuthProvider::new()`, plus the startup panic on
+  env mismatch and the `"NoopAuthProvider active"` INFO log.
+  The constructor guard is a Rust `assert!` (or equivalent) —
+  a unit test in slice 6 asserts that `NoopAuthProvider::new()`
+  panics when `VISLOOM_ENV` is unset or non-`"dev"`.

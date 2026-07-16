@@ -158,6 +158,32 @@ Noop; anything else, including unset → panic. Unset is now
 prod-hostile by default; `VISLOOM_ENV=dev` must be an explicit
 opt-in.
 
+### 5. ADR 0013 guard tightened to two layers (defense in depth)
+
+**Cite:** ADR 0013 §Decision Outcome — Selection guard +
+Constructor guard.
+
+Follow-up on §4: the selection guard closes the intended path,
+but slice-6 code (or tests, or a future refactor) that
+instantiates `NoopAuthProvider` directly would bypass the boot-
+time check. Tightened by adding a **constructor-level guard**
+inside `NoopAuthProvider::new()` that re-runs the same
+`VISLOOM_ENV=="dev"` check and panics on mismatch.
+
+Also made the check semantics explicit: byte-for-byte
+comparison (no case-fold, no whitespace trim). The
+`" dev"` / `"DEV"` failure modes now panic loud instead of
+matching. Boot-time INFO log line was pinned to include the
+literal string `"NoopAuthProvider active — VISLOOM_ENV=dev"`
+so grep-based prod-readiness checks can flag it. Consequences
+names slice 6 as the enforcer for both guards + a required
+unit test that asserts `NoopAuthProvider::new()` panics
+without `VISLOOM_ENV=dev`.
+
+Non-structural: adds specificity + a second enforcement layer
+inside the existing decision; no acceptance criteria or
+`## Files touched` scope changes.
+
 ## Summary
 
 **Acceptance-criteria status (all 10 pass):**
