@@ -246,24 +246,32 @@ via make contracts` banner (per `0011:44-49`).
 
 `_envelope.v1.json` declares the common properties. Per
 `events.md:45-63` and ADR `0015:58-75`, it requires
-`event_id` (ULID pattern), `traceparent`, `trace_id` (16-hex-char
-pattern — derived from `traceparent`'s trace-id segment, log-only
-per `events.md:57-59`), `occurred_at` (RFC 3339 date-time), and
-`data`; optional `tracestate`; sets `additionalProperties: false`;
-declares `$schema` as JSON Schema 2020-12. Producer discipline
+`event_id` (ULID pattern), `traceparent` (validated against the
+W3C Trace Context regex `^[0-9a-f]{2}-[0-9a-f]{32}-[0-9a-f]{16}-[0-9a-f]{2}$`
+— version-traceid-spanid-flags per
+[w3.org/TR/trace-context](https://www.w3.org/TR/trace-context/#traceparent-header)),
+`trace_id` (32 lowercase hex, pattern `^[0-9a-f]{32}$` — the
+trace-id segment of `traceparent`, log-only per
+`events.md:57-59`), `occurred_at` (RFC 3339 date-time), and
+`data`; optional `tracestate`; sets `additionalProperties:
+false`; declares `$schema` as JSON Schema 2020-12. Producer discipline
 (never propagate `trace_id`; derive it from `traceparent`) is the
 producer's job — the schema records the required-and-present
 contract that all four `events.md`-canonical fields land on the
 wire so consumers can pattern-match on them.
 
 Each stream schema `$ref`s the envelope and overrides `data`.
-`data` shapes below. **Only the `media_kind` discriminator has
-an ADR anchor today (ADR `0007:38-46`);** every other field is a
-new public-contract decision this slice owns under ADR
-`0011:44-53` (which designates slice 3 as the owner of the
-concrete wire format). Each field is justified from a citation
-already committed elsewhere in the docs surface — nothing here
-is a free-form choice:
+`data` shapes below. **Only `media_kind` has a direct ADR
+anchor (ADR `0007:38-46`); every other field name in this
+section is a new public-contract decision slice 3 is making
+here** — the ADRs and conventions committed to date do not
+prescribe them. ADR `0011:44-53` designates slice 3 as the
+owner of the concrete wire format, so this is where those
+decisions land. Per-field notes below cite the doc anchor whose
+posture the field is *consistent with* (naming convention,
+non-PII posture, ULID scheme, etc.) — not an anchor that
+prescribed the field. Reviewer changing any specific name is a
+plan-review correction, not a scope escalation:
 
 - **`jobs.media.index.v1.data`** — API → worker "please index
   this media."
@@ -314,10 +322,11 @@ is a free-form choice:
     worker gives up. Consumers use it to schedule redelivery
     without polling.
 
-None of these fields are free-form; each is derived from an
-already-committed doc anchor. If reviewer disagrees on any
-specific field naming or omission, that's a plan-review
-correction rather than a slice-scope change.
+These are slice-3 decisions, made here under ADR 0011's
+authoring scope. The cited anchors govern posture and
+naming conventions the fields conform to; they do not prescribe
+the specific names or the payload structure. Field-by-field
+override during plan review is welcomed.
 
 All schemas set `additionalProperties: false` at every object
 level for review-time drift-catching.
@@ -431,7 +440,10 @@ this reconciles with ADR 0011's "`make contracts && git diff
 New workflow `.github/workflows/contracts.yml` (kept separate
 from `ci.yml:33-42` because it needs its own toolchain matrix —
 Python 3.12 + Rust stable + Node 20 — and runs against a
-different path-filter). Structure:
+different path-filter). The `drift` job pins `defaults.run.
+working-directory: packages/contracts` because every GitHub
+Actions `run` step otherwise resets to the repo root, and the
+root `Makefile` is deferred to slice 9 (OQ 5). Structure:
 
 ```yaml
 name: contracts
@@ -444,14 +456,17 @@ jobs:
   drift:
     needs: changes
     if: needs.changes.outputs.contracts == 'true'
+    defaults:
+      run:
+        working-directory: packages/contracts    # every `run` step cd's here
     steps:
-      - checkout
+      - checkout                                 # runs at repo root (uses: step)
       - setup-python (3.12) + install uv (pinned)
       - setup-rust  (stable)
       - setup-node  (20)
-      - cd packages/contracts && make contracts
-      - git diff --exit-code -- packages/contracts/{ts,rust,py}
-      - make test        # uv run --frozen --directory tests pytest
+      - make contracts                           # in packages/contracts
+      - git diff --exit-code -- ts rust py       # in packages/contracts
+      - make test                                # uv run --frozen --directory tests pytest
 ```
 
 Cached generator installs via `actions/cache` keyed on
@@ -781,6 +796,11 @@ Every criterion automated-or-observable with a falsifier.
   `data` (with `tracestate` optional). *Falsified if:*
   `python -c 'import json,sys; s=json.load(open("packages/contracts/events/_envelope.v1.json")); r=set(s.get("required",[])); assert r == {"event_id","traceparent","trace_id","occurred_at","data"}, r'`
   raises.
+- [ ] `trace_id` pattern is exactly 32 lowercase hex chars per
+  W3C Trace Context. *Falsified if:*
+  `python -c 'import json; s=json.load(open("packages/contracts/events/_envelope.v1.json")); assert s["properties"]["trace_id"]["pattern"] == "^[0-9a-f]{32}$"'`
+  raises, **or** `grep -E '\{16\}' packages/contracts/events/_envelope.v1.json`
+  matches on any line that also names `trace_id`.
 - [ ] `schema.sql` names the three ADR-0008-required tables
   literally. *Falsified if:*
   `grep -cE '^CREATE TABLE (events|event_memberships|share_tokens)\b' packages/contracts/schema.sql`

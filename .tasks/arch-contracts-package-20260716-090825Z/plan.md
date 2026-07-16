@@ -13,10 +13,13 @@ review cycle, before `plan-approved`.
    (spec §Event schemas — envelope $ref, OQ 4 proposed
    `$ref`-shared). Field set from `docs/conventions/events.md:45-63`
    + ADR `0015:58-75`. Required: `event_id` (ULID pattern),
-   `traceparent`, `trace_id` (16-hex-char pattern, log-only per
-   `events.md:57-59`), `occurred_at` (`format: date-time`),
-   `data`. Optional: `tracestate`. `additionalProperties: false`;
-   `$schema` = JSON Schema 2020-12.
+   `traceparent` (W3C Trace Context pattern
+   `^[0-9a-f]{2}-[0-9a-f]{32}-[0-9a-f]{16}-[0-9a-f]{2}$`),
+   `trace_id` (`^[0-9a-f]{32}$` — 32-hex trace-id segment of
+   `traceparent`, log-only per `events.md:57-59`),
+   `occurred_at` (`format: date-time`), `data`. Optional:
+   `tracestate`. `additionalProperties: false`; `$schema` =
+   JSON Schema 2020-12.
 2. **Author the three stream schemas** (spec §Event schemas).
    Each `$ref`s the envelope and overrides `data`. Payload shapes
    per spec: `jobs.media.index.v1` (ADR `0007:38-46` —
@@ -82,8 +85,12 @@ review cycle, before `plan-approved`.
 10. **Author `.github/workflows/contracts.yml`** (spec §CI
     drift-check). `dorny/paths-filter@v3` on
     `packages/contracts/**` and `scripts/gen-contracts.sh`;
-    installs Python 3.12 + Rust stable + Node 20; step order
-    install → `make contracts` → `git diff --exit-code -- packages/contracts/{ts,rust,py}` →
+    installs Python 3.12 + Rust stable + Node 20; `drift` job
+    pins `defaults.run.working-directory: packages/contracts`
+    so `make contracts` / `git diff` / `make test` all execute
+    inside the package (root Makefile deferred per OQ 5). Step
+    order: install → `make contracts` → `git diff --exit-code
+    -- ts rust py` (paths relative to the working-directory) →
     `make test`. `actions/cache` on generator installs keyed on
     `hashFiles('scripts/gen-contracts.sh')`.
 11. **Edit `AGENTS.md` §6** (spec §AGENTS.md §6 entries, OQ 3
