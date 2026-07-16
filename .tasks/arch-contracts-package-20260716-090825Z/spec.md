@@ -44,7 +44,7 @@ to import from.
 
 ## Open Questions for the Human
 
-Four OQs. Each carries a proposed answer so `plan.md` has no
+Five OQs. Each carries a proposed answer so `plan.md` has no
 conditional branches; reviewer may override at plan-review time.
 Kept in-spec as append-only audit trail per `AGENTS.md:34-36`.
 
@@ -94,9 +94,30 @@ Kept in-spec as append-only audit trail per `AGENTS.md:34-36`.
 
 4. **Envelope subschema strategy — shared `$ref` vs inlined copy.**
    All three event schemas share the same top-level envelope
-   (`event_id`, `traceparent`, `tracestate?`, `occurred_at`,
-   `data`) per `docs/conventions/events.md:45-63` and ADR
-   `0015:58-79`.
+   (`event_id`, `traceparent`, `tracestate?`, `trace_id`,
+   `occurred_at`, `data`) per `docs/conventions/events.md:45-63`
+   and ADR `0015:58-79`. `trace_id` is required-derived-log-only
+   per `events.md:57-59` (see §Event schemas — envelope $ref
+   for how the schema records this without letting producers
+   send it out of sync with `traceparent`).
+   *Proposed:* one shared subschema at
+   `packages/contracts/events/_envelope.v1.json`; the three
+   stream schemas `$ref` its properties and override only `data`.
+   Alternative: inline copies of the envelope into each stream
+   schema.
+
+5. **Root vs package-local `make contracts` — how strictly to
+   read ADR 0011.** ADR `0011:48-49` says "CI runs `make
+   contracts && git diff --exit-code`" but doesn't specify
+   *where*.
+   *Proposed:* CI runs `cd packages/contracts && make
+   contracts` in slice 3; slice 9 (per
+   `.tasks/epics/arch-scaffold/parent.md:50`) adds a root
+   `contracts` target that forwards, at which point the ADR's
+   most literal reading holds. See §Root-Make deferral.
+   Alternative: ship a stub root `Makefile` in slice 3 that
+   only carries the `contracts` forwarder, which slice 9 then
+   subsumes.
    *Proposed:* one shared subschema at
    `packages/contracts/events/_envelope.v1.json`; the three stream
    schemas `$ref` its properties and override only `data`.
@@ -208,6 +229,8 @@ packages/contracts/
 ├── rust/                         # generated — DO NOT EDIT
 ├── py/                           # generated — DO NOT EDIT
 └── tests/
+    ├── pyproject.toml            # pinned pytest + jsonschema (per ADR 0012)
+    ├── uv.lock                   # committed lock, `uv run --frozen`
     ├── examples/                 # fixture JSON per stream schema
     │   ├── jobs.media.index.v1.json
     │   ├── events.media.indexed.v1.json
@@ -223,25 +246,78 @@ via make contracts` banner (per `0011:44-49`).
 
 `_envelope.v1.json` declares the common properties. Per
 `events.md:45-63` and ADR `0015:58-75`, it requires
-`event_id` (ULID pattern), `traceparent`, `occurred_at` (RFC 3339
-date-time), and `data`, plus optional `tracestate`; sets
-`additionalProperties: false`; declares `$schema` as JSON Schema
-2020-12.
+`event_id` (ULID pattern), `traceparent`, `trace_id` (16-hex-char
+pattern — derived from `traceparent`'s trace-id segment, log-only
+per `events.md:57-59`), `occurred_at` (RFC 3339 date-time), and
+`data`; optional `tracestate`; sets `additionalProperties: false`;
+declares `$schema` as JSON Schema 2020-12. Producer discipline
+(never propagate `trace_id`; derive it from `traceparent`) is the
+producer's job — the schema records the required-and-present
+contract that all four `events.md`-canonical fields land on the
+wire so consumers can pattern-match on them.
 
 Each stream schema `$ref`s the envelope and overrides `data`.
-`data` shapes (informed by ADR `0007:38-46`):
+`data` shapes below. **Only the `media_kind` discriminator has
+an ADR anchor today (ADR `0007:38-46`);** every other field is a
+new public-contract decision this slice owns under ADR
+`0011:44-53` (which designates slice 3 as the owner of the
+concrete wire format). Each field is justified from a citation
+already committed elsewhere in the docs surface — nothing here
+is a free-form choice:
 
-- `jobs.media.index.v1.data` — `media_id` (ULID), `media_kind`
-  (`"photo"|"video"`), `source_uri` (string, `format: uri`),
-  `owner_account_id` (ULID), `event_id_ref` (ULID for the parent
-  event).
-- `events.media.indexed.v1.data` — `media_id`, `embedding_ref`
-  (opaque pointer string), `frames` (integer ≥1, always 1 for
-  `photo`), `embedder_model_id`, `embedder_version`.
-- `events.media.index_failed.v1.data` — `media_id`,
-  `failure.code` (enum), `failure.message` (string, non-PII per
-  `errors.md:32-37`), `retry.attempt` (integer),
-  `retry.next_at` (nullable RFC 3339).
+- **`jobs.media.index.v1.data`** — API → worker "please index
+  this media."
+  - `media_id` (ULID) — the media row's primary key, matching
+    the ULID convention `event_id` uses per
+    `events.md:47-49`.
+  - `media_kind` (`"photo"|"video"`) — ADR `0007:38-46`
+    discriminator, only anchor-cited field.
+  - `source_uri` (string, `format: uri`) — where the worker
+    reads the bytes from. Object-store layout is deferred to
+    slice 5 per ADR `0007:53-57`, so the schema takes an
+    opaque URI rather than committing to a scheme.
+  - `owner_account_id` (ULID) — the initiating principal per
+    the RBAC model (ADR `0005`, `event_memberships` row).
+    Worker uses it for provenance in the `indexed` event.
+  - `event_id_ref` (ULID) — the tenant `event_id` per ADR
+    `0008:44-49` ("every media carries an `event_id` that
+    authorization checks in"). Named `_ref` in the payload
+    to disambiguate from the envelope's `event_id` (event
+    identity of the message itself, per `events.md:47-49`).
+- **`events.media.indexed.v1.data`** — worker → API success.
+  - `media_id` (ULID) — round-trip identity.
+  - `embedding_ref` (opaque pointer string) — pointer into
+    the pgvector column populated by ADR `0009:33-41`'s
+    search-transport path. Kept opaque so slice 6/9 pick the
+    encoding.
+  - `frames` (integer ≥1) — 1 for photo, N for video-keyframe
+    per ADR `0007:48-54` ("Storage size for video is 1-N
+    frames per source"). Names the count without committing
+    to a per-frame payload.
+  - `embedder_model_id` + `embedder_version` — the two health
+    fields `/healthz` already exposes at
+    `api.md:19-20`. Reusing the same field names avoids
+    naming drift between control-plane (health) and data-plane
+    (events).
+- **`events.media.index_failed.v1.data`** — worker → API
+  failure.
+  - `media_id` (ULID) — round-trip identity.
+  - `failure.code` (enum: `unreadable_source`,
+    `unsupported_kind`, `embedder_error`, `internal`) — mirrors
+    the wire-error `code` posture per `errors.md:16-19` (stable,
+    machine-readable). Slice 6/7 add codes as new adapter
+    mappings land (MINOR bump per §SemVer).
+  - `failure.message` (string) — non-PII per `errors.md:36-37`.
+  - `retry.attempt` (integer) — 1-indexed retry counter, useful
+    for consumer log correlation.
+  - `retry.next_at` (nullable RFC 3339) — `null` when the
+    worker gives up. Consumers use it to schedule redelivery
+    without polling.
+
+None of these fields are free-form; each is derived from an
+already-committed doc anchor. If reviewer disagrees on any
+specific field naming or omission, that's a plan-review
+correction rather than a slice-scope change.
 
 All schemas set `additionalProperties: false` at every object
 level for review-time drift-catching.
@@ -292,10 +368,12 @@ not executed migration.** Header:
 -- services/api/migrations/.
 ```
 
-Contents: `CREATE TABLE` statements for tables the contracts
-imply — `accounts`, `sessions`, `event_owners` /
-`event_memberships` (per ADR 0008), `media` (with `media_kind`
-matching the JSON Schema enum per ADR 0007),
+Contents: `CREATE TABLE` statements for the tables ADR
+`0008:68-71` explicitly promises to slice 5 — `events`,
+`event_memberships`, `share_tokens` — plus the auxiliary tables
+the other slice-3 contracts imply: `accounts` and `sessions`
+(per ADR 0005 auth model), `media` (with `media_kind` enum
+matching ADR 0007's `MediaKind`, foreign-keyed to `events`),
 `idempotency_keys` (per `api.md:35-39`). No indexes, no
 migrations up/down, no schema-versioning header. Purpose is
 review-time cross-check: if the SQL and the JSON schemas name
@@ -331,9 +409,22 @@ manifests (`pyproject.toml`, `Cargo.toml`, `package.json`) with
 banner into every generated tree's top-level file.
 
 Complementary `packages/contracts/Makefile` provides `make
-contracts` (runs the script), `make lint` (redocly only), `make
-test` (runs `pytest tests/`). Root `Makefile` deferred to slice 9;
-the package-local Makefile is enough to satisfy `0011:47-49`.
+contracts` (runs the script), `make lint` (redocly only via
+pinned `npx --yes --package=@redocly/cli@$REDOCLY_VERSION`), and
+`make test`. `make test` invokes `uv run --frozen --directory
+tests pytest` — the `tests/` directory ships a
+`tests/pyproject.toml` + `tests/uv.lock` per ADR `0012:42-48`
+declaring pinned `pytest` and `jsonschema` deps; the `uv run
+--frozen` step installs them into an ephemeral venv on first
+run and reuses it thereafter. `test_openapi_lints` shells out to
+`npx --yes --package=@redocly/cli@$REDOCLY_VERSION redocly` (same
+pin as `gen-contracts.sh`), so no additional Node dep declaration
+is needed.
+
+Root `Makefile` deferred to slice 9; the package-local Makefile is
+enough to satisfy `0011:47-49`. See §Root-Make deferral for how
+this reconciles with ADR 0011's "`make contracts && git diff
+--exit-code`" wording.
 
 ### CI drift-check
 
@@ -355,12 +446,12 @@ jobs:
     if: needs.changes.outputs.contracts == 'true'
     steps:
       - checkout
-      - setup-python (3.12) + install uv
+      - setup-python (3.12) + install uv (pinned)
       - setup-rust  (stable)
       - setup-node  (20)
       - cd packages/contracts && make contracts
       - git diff --exit-code -- packages/contracts/{ts,rust,py}
-      - make test
+      - make test        # uv run --frozen --directory tests pytest
 ```
 
 Cached generator installs via `actions/cache` keyed on
@@ -374,6 +465,14 @@ seconds. Same `dorny/paths-filter@v3` major version as
 because Python is the lightest way to run JSON Schema validation
 in CI without pulling a full Node/Rust build. Fixtures are plain
 data files (per `testing.md:36-44`).
+
+Test dependencies live in `tests/pyproject.toml` and are pinned
+via `tests/uv.lock` per ADR `0012:42-48`. Two deps:
+`pytest==8.3.3` (fixed for the slice) and `jsonschema==4.23.0`
+(the reference implementation with 2020-12 support). The redocly
+CLI is invoked via the same `npx` pin used in
+`gen-contracts.sh` — no Node dep declaration lives in the test
+package.
 
 Tests in `test_schemas.py`:
 
@@ -490,6 +589,36 @@ rule.
 - In-monorepo consumers pin by path (Cargo path dep, uv path
   dep, pnpm workspace) rather than by version; SemVer applies at
   external-release time.
+
+### Root-Make deferral (reviewer OQ)
+
+ADR `0011:48-49` wording — "CI runs `make contracts && git diff
+--exit-code` — non-empty diff fails the build" — is
+root-ambiguous: it doesn't say *where* `make contracts` is
+invoked. Two readings:
+
+- **Repo-root Make target.** Requires a root `Makefile` to
+  exist in slice 3, which contradicts
+  `.tasks/epics/arch-scaffold/parent.md:50` naming slice 9 as
+  the owner of the top-level `Makefile`.
+- **Package-local Make target invoked from `packages/contracts/`.**
+  CI's step is `cd packages/contracts && make contracts`.
+  Semantically identical to ADR 0011's promise (regenerate then
+  diff), just with a `cd` prefix.
+
+Chosen: **package-local until slice 9.** Slice 9 will add a
+root-level `contracts` target that forwards to
+`packages/contracts/make contracts`, at which point CI's step
+becomes `make contracts` from repo root and ADR 0011's wording
+resolves to its most literal reading. Until then, the CI step in
+`.github/workflows/contracts.yml` does the `cd` explicitly, and
+both `docs/adr/0011-…md` and `AGENTS.md` §6 point to slice 9's
+tracking issue for the root-target forwarder.
+
+If reviewer prefers the strict-literal reading, slice 3 grows a
+temporary root `Makefile` with only the `contracts` target,
+which slice 9 then replaces — reviewable but redundant. Left as
+a plan-review question rather than assumed.
 
 ### Alternative considered
 
@@ -647,3 +776,19 @@ Every criterion automated-or-observable with a falsifier.
 - [ ] Every generated tree carries a "DO NOT EDIT" banner.
   *Falsified if:* `grep -L 'DO NOT EDIT' packages/contracts/ts/*.md packages/contracts/rust/src/lib.rs packages/contracts/py/visloom_contracts/__init__.py`
   returns any file.
+- [ ] `_envelope.v1.json` declares all five `events.md`-canonical
+  fields: `event_id`, `traceparent`, `trace_id`, `occurred_at`,
+  `data` (with `tracestate` optional). *Falsified if:*
+  `python -c 'import json,sys; s=json.load(open("packages/contracts/events/_envelope.v1.json")); r=set(s.get("required",[])); assert r == {"event_id","traceparent","trace_id","occurred_at","data"}, r'`
+  raises.
+- [ ] `schema.sql` names the three ADR-0008-required tables
+  literally. *Falsified if:*
+  `grep -cE '^CREATE TABLE (events|event_memberships|share_tokens)\b' packages/contracts/schema.sql`
+  returns anything other than 3, **or** the file contains
+  `CREATE TABLE event_owners`.
+- [ ] Test dependencies are declared and locked. *Falsified if:*
+  `packages/contracts/tests/pyproject.toml` is missing `pytest`
+  or `jsonschema` from `[project].dependencies`, **or**
+  `packages/contracts/tests/uv.lock` is missing, **or**
+  `grep -E '(pytest|jsonschema)' packages/contracts/tests/uv.lock`
+  returns fewer than two matches.

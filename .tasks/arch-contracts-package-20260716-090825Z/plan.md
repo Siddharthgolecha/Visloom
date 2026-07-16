@@ -4,7 +4,7 @@
 
 Sequenced for implementation **after** `plan-approved` is granted;
 `spec.md` + this `plan.md` are the artifacts under review. All
-four OQs are resolved in-spec with proposed answers — this plan
+five OQs are resolved in-spec with proposed answers — this plan
 has no `if OQ X` branches. Reviewer may override any OQ during
 plan review; the corresponding steps below adjust in the same
 review cycle, before `plan-approved`.
@@ -13,8 +13,9 @@ review cycle, before `plan-approved`.
    (spec §Event schemas — envelope $ref, OQ 4 proposed
    `$ref`-shared). Field set from `docs/conventions/events.md:45-63`
    + ADR `0015:58-75`. Required: `event_id` (ULID pattern),
-   `traceparent`, `occurred_at` (`format: date-time`), `data`.
-   Optional: `tracestate`. `additionalProperties: false`;
+   `traceparent`, `trace_id` (16-hex-char pattern, log-only per
+   `events.md:57-59`), `occurred_at` (`format: date-time`),
+   `data`. Optional: `tracestate`. `additionalProperties: false`;
    `$schema` = JSON Schema 2020-12.
 2. **Author the three stream schemas** (spec §Event schemas).
    Each `$ref`s the envelope and overrides `data`. Payload shapes
@@ -36,11 +37,13 @@ review cycle, before `plan-approved`.
 4. **Author `packages/contracts/schema.sql`** (spec §schema.sql
    posture, OQ 1 proposed forward-looking reference). Header
    comment cites ADR 0016 and names slice 5 as executor. Body:
-   `CREATE TABLE` statements for `accounts`, `sessions`,
-   `event_owners` / `event_memberships` (per ADR 0008), `media`
-   (with `media_kind` enum matching ADR 0007), `idempotency_keys`
-   (per `docs/conventions/api.md:35-39`). No indexes, no
-   migration verbs, no schema-version header.
+   `CREATE TABLE` statements for the three ADR-0008-required
+   tables (`events`, `event_memberships`, `share_tokens` per ADR
+   `0008:68-71`), plus `accounts` and `sessions` (per ADR 0005
+   auth model), `media` (with `media_kind` enum matching ADR
+   0007, foreign-keyed to `events`), and `idempotency_keys` (per
+   `docs/conventions/api.md:35-39`). No indexes, no migration
+   verbs, no schema-version header.
 5. **Author `scripts/gen-contracts.sh`** (spec §
    `scripts/gen-contracts.sh`, OQ 2 proposed pins).
    `set -euo pipefail`. Pins: `DMCG_VERSION=0.26.3`,
@@ -49,10 +52,11 @@ review cycle, before `plan-approved`.
    `scripts/gen-contracts.sh` enumerates. Writes DO-NOT-EDIT
    banner into every generated tree.
 6. **Author `packages/contracts/Makefile`** (spec §
-   `scripts/gen-contracts.sh` — package-local Makefile). Targets:
-   `contracts` (calls the script), `lint` (redocly only),
-   `test` (pytest). Root Makefile deferred to slice 9
-   (`.tasks/epics/arch-scaffold/parent.md:50`).
+   `scripts/gen-contracts.sh` — package-local Makefile, OQ 5
+   proposed package-local until slice 9). Targets: `contracts`
+   (calls the script), `lint` (redocly only via pinned `npx`),
+   `test` (`uv run --frozen --directory tests pytest`). Root
+   Makefile deferred to slice 9.
 7. **Author `packages/contracts/{VERSION,README.md,CHANGELOG.md}`**
    (spec §SemVer + release-note posture). `VERSION` = `0.1.0`;
    `README.md` documents bump rules per ADR `0017:51-58`;
@@ -64,7 +68,10 @@ review cycle, before `plan-approved`.
    this PR per ADR `0011:44-49`. If a generator misbehaves on
    the first run, that's a plan-approved regression — halt and
    fix before continuing.
-9. **Author contract tests + fixtures** (spec §Contract tests).
+9. **Author contract tests + deps + fixtures** (spec §Contract
+   tests). `tests/pyproject.toml` declares `pytest==8.3.3` and
+   `jsonschema==4.23.0` per ADR `0012:42-48`;
+   `tests/uv.lock` is committed alongside per the same ADR.
    `tests/test_schemas.py` with five test functions:
    `test_schemas_self_validate`, `test_examples_round_trip`,
    `test_openapi_lints`, `test_envelope_ref_shared`,
@@ -126,6 +133,10 @@ New:
 - `packages/contracts/ts/**` — generated TypeScript bindings.
 - `packages/contracts/rust/**` — generated Rust bindings.
 - `packages/contracts/py/**` — generated Python bindings.
+- `packages/contracts/tests/pyproject.toml` — pinned `pytest` +
+  `jsonschema` deps per ADR 0012.
+- `packages/contracts/tests/uv.lock` — committed lockfile per
+  ADR 0012.
 - `packages/contracts/tests/test_schemas.py` — five test
   functions per spec §Contract tests.
 - `packages/contracts/tests/conftest.py` — pytest discovery.
