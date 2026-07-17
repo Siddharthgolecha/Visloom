@@ -166,15 +166,15 @@ sequenceDiagram
 
     Owner->>API: upload media
     API->>PG: insert media row
-    API->>Redis: XADD jobs.media.index.v1<br/>(envelope: event_id, traceparent, occurred_at, data)
+    API->>Redis: XADD jobs.media.index.v1<br/>envelope: event_id, traceparent, trace_id, occurred_at, data
     Note over API,Worker: traceparent propagates the trace —<br/>worker spans are children of the API span (ADR 0015)
     Redis->>Worker: consumer-group read
     Worker->>Worker: detect faces → embed<br/>(video: keyframes → N frames)
     alt indexed
         Worker->>PG: write embeddings (pgvector)
-        Worker->>Redis: XADD events.media.indexed.v1<br/>(embedding_ref, frames, embedder model)
+        Worker->>Redis: XADD events.media.indexed.v1<br/>data: media_id, embedding_ref, frames,<br/>embedder_model_id, embedder_version
     else failed
-        Worker->>Redis: XADD events.media.index_failed.v1<br/>(reason)
+        Worker->>Redis: XADD events.media.index_failed.v1<br/>data: media_id, failure {code, message},<br/>retry {attempt, next_at}
     end
     Worker->>Redis: XACK the job
     Redis->>API: consumer-group read (result)

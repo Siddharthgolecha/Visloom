@@ -40,6 +40,16 @@ overview restates ADR/`schema.sql` content and has no CI drift-check. Mitigated
 by the source-of-truth disclaimer at the top of `overview.md`; a standing CI
 guard would be its own slice.
 
+**Post-ready review fix (2026-07-17).** Reviewer caught the indexing sequence
+payload labels drifting from the concrete event schemas — exactly the
+`## Failure modes` "diagram ↔ source drift" risk. Corrected the diagram-5
+labels to the exact `packages/contracts/events/` field names: the envelope
+label now includes required `trace_id`; `events.media.indexed.v1` shows
+`media_id, embedding_ref, frames, embedder_model_id, embedder_version`;
+`events.media.index_failed.v1` shows `media_id, failure {code, message},
+retry {attempt, next_at}`. Non-structural (no spec/plan/acceptance change).
+Re-rendered all 7 via mermaid-cli. `tested-against-real-input`.
+
 ## Summary
 
 <!-- Incremental. Derived into the PR description at "ready" time by
