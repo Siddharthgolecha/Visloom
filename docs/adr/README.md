@@ -26,10 +26,11 @@ sections). One decision per file, numbered monotonically.
 | [0016](0016-redis-usage.md) | Redis usage: key naming + TTL taxonomy | Accepted |
 | [0017](0017-versioning-policy.md) | Versioning policy: URL-path + event streams + contracts | Accepted |
 | [0018](0018-documentation-tooling.md) | Documentation tooling: MyST-Sphinx / rustdoc / TypeDoc | Accepted |
+| [0019](0019-architecture-diagrams-mermaid.md) | Architecture diagrams: inline Mermaid, flowchart-styled C4 | Accepted |
 
 ## Numbering
 
-Four-digit, monotonic, no gaps. `0019` is next. Numbers are
+Four-digit, monotonic, no gaps. `0020` is next. Numbers are
 allocated at PR-open time. Superseded ADRs keep their number and
 gain a `Superseded by [NNNN](NNNN-...md)` line in the `Status`
 field — never renumber.
