@@ -71,7 +71,10 @@ answer during plan review.
 
 ## Research findings
 
-Every claim anchored to a `file:line` per `AGENTS.md:32-38`.
+Each claim traces to a `file:line`, a file-level citation, or a runnable
+check, per the anchored-claims rule (`AGENTS.md:36`). ADRs cited at file
+level below are whole-document decisions (the ADR *is* the claim's source);
+line anchors are given where a claim points at a specific passage.
 
 **System shape (for the C4 + sequence diagrams):**
 
@@ -162,11 +165,16 @@ Failure modes).
 MADR-full (five sections per `docs/adr/template.md`), `Status: Accepted`.
 Records: architecture diagrams live inline in `docs/architecture/overview.md`
 as Mermaid; C4 levels are drawn with stable flowchart syntax rather than the
-experimental `C4*` types. `## Consequences` names the forward-dependency:
-the MyST-Sphinx publish target (slice 7 `conf.py`) will need
-`sphinxcontrib-mermaid`, and carries a supersession-path clause mirroring
-`docs/adr/0018-documentation-tooling.md:68-73`. Index row added to
-`docs/adr/README.md` (title verbatim; `0019` → next number becomes `0020`).
+experimental `C4*` types. `## Consequences` names the forward-dependency
+respecting the existing slice split: GitHub renders mermaid natively today, so
+this slice needs no tooling. When the Python Sphinx config lands
+(`docs/conf.py`, slice-7 scope per `docs/adr/0018-documentation-tooling.md:66-67`)
+it adds a mermaid extension (e.g. `sphinxcontrib-mermaid` or the MyST fence);
+the **published-HTML target itself stays deferred to slice 9** per
+`docs/adr/0018-documentation-tooling.md:55-57` and
+`docs/conventions/documentation.md:72-76`. ADR 0019 carries a supersession-path
+clause mirroring `docs/adr/0018-documentation-tooling.md:68-73`. Index row
+added to `docs/adr/README.md` (title verbatim; `0019` → next number `0020`).
 
 ### Alternative considered
 
@@ -238,10 +246,17 @@ Every criterion automated-or-observable with a falsifier.
 - [ ] `docs/architecture/overview.md` exists and contains exactly 7 mermaid
   fences. *Falsified if:* `grep -c '^```mermaid' docs/architecture/overview.md`
   ≠ 7.
-- [ ] The 7 fences cover the required kinds: ≥1 `sequenceDiagram`, ≥1
-  `erDiagram`, and the remaining flowchart/graph diagrams for the C4 levels.
-  *Falsified if:* `grep -c 'sequenceDiagram' overview.md` < 2, or
-  `grep -c 'erDiagram' overview.md` < 1.
+- [ ] The 7 fences match the locked kind contract **exactly**: 4 flowchart-C4
+  + 2 sequence + 1 ER (spec `## Approach` table). *Falsified if any of:*
+  `grep -c 'sequenceDiagram' overview.md` ≠ 2; `grep -c 'erDiagram'
+  overview.md` ≠ 1; the count of fences opening with `flowchart`/`graph`
+  (first non-blank line after ` ```mermaid `) ≠ 4. (4 + 2 + 1 = 7, so an extra
+  or mis-typed diagram fails a count even though the total is 7.)
+- [ ] All 7 locked diagram sections are present by title. *Falsified if:* any
+  of these `##`/`###` section headings is absent from `overview.md` — System
+  context, Containers, Component — API, Component — Worker, Indexing (sequence),
+  Search (sequence), Data model. (Wording may vary but each of the 7 must have
+  its own titled section, matched against the spec `## Approach` table.)
 - [ ] Every diagram section cites at least one ADR by relative link.
   *Falsified if:* any `##` diagram section has no `../adr/00` link between it
   and the next `##` heading.
