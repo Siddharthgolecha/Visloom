@@ -10,6 +10,7 @@ services:
   postgres:
     image: pgvector/pgvector:pg16
     restart: unless-stopped
+    ports: !reset []
     deploy:
       resources:
         limits:
@@ -18,6 +19,7 @@ services:
   redis:
     command: ["redis-server", "/usr/local/etc/redis/redis.conf", "--appendonly", "yes"]
     restart: unless-stopped
+    ports: !reset []
     volumes:
       - redis_data:/data
     deploy:
@@ -29,12 +31,13 @@ services:
     restart: unless-stopped
     environment:
       SITE_ADDRESS: ${SITE_ADDRESS}
-    ports:
+    ports: !override
       - "80:80"
       - "443:443"
 
   otel-collector:
     restart: unless-stopped
+    ports: !reset []
     deploy:
       resources:
         limits:

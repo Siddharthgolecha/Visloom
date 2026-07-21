@@ -84,7 +84,7 @@ CREATE TABLE idempotency_keys (
 CREATE TABLE embeddings (
     embedding_id text PRIMARY KEY,
     media_id text NOT NULL REFERENCES media(media_id),
-    frame_index integer NOT NULL,
+    frame_index integer NOT NULL CHECK (frame_index >= 0),
     embedding vector(512) NOT NULL,
     created_at timestamptz NOT NULL,
     UNIQUE (media_id, frame_index)

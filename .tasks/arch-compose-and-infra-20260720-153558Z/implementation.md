@@ -86,6 +86,43 @@ hand-synced both, but a future edit to one without the other will silently
 drift again. Same known gap as the diagrams slice; a standing guard is its
 own slice, not proposed here.
 
+**Post-ready review fix (2026-07-21).** Reviewer caught two real defects,
+both inside files already in the frozen `## Files touched` list, fixed
+non-structurally without touching `spec.md`/`plan.md`:
+
+1. **Prod port leakage.** `compose.prod.yml` only overrode
+   tags/limits/restart policy and never cleared the base overlay's
+   `ports:` entries, so Compose's array-merge semantics meant the merged
+   prod config still published Postgres `5432`, Redis `6379`, and the
+   OTel collector's `4317`/`4318` alongside Caddy's `80`/`443` — exactly
+   the internal-service exposure `## Approach`'s "same service defs,
+   overlay flips tags/limits/volumes" pattern was meant to avoid stating
+   explicitly. Fixed by adding `ports: !reset []` to `postgres`, `redis`,
+   and `otel-collector` in `compose.prod.yml`, and `!override` on
+   `caddy`'s (functionally a no-op there, but makes the intent explicit).
+   Verified via `docker compose ... config --format json` on the merged
+   overlay: only `caddy` reports a non-null `ports` list (`80`, `443`);
+   the other three report `null`. `tested-against-real-input`.
+2. **Missing `frame_index` lower bound.** `embeddings.frame_index` is
+   documented in `schema.sql`'s comment as `0..N-1` but had no constraint
+   enforcing it, so a negative value would silently sit under the
+   `(media_id, frame_index)` unique key as a distinct row. Fixed by
+   adding `CHECK (frame_index >= 0)` — same inline style already used by
+   `event_memberships.role` and `media.media_kind` in this file. Verified
+   against a live Postgres container: re-ran `scripts/gen-contracts.sh`
+   after the edit (clean — contracts don't read `schema.sql`, per
+   `## Failure modes`), applied the updated `schema.sql`, confirmed
+   `frame_index = -1` raises `embeddings_frame_index_check` and
+   `frame_index = 0` still inserts. `tested-against-real-input`.
+
+A third reviewer finding — add `infra/compose/.env` to `.gitignore` — is
+**not applied** here. `.gitignore` is outside the frozen `## Files
+touched` list, and `.env.example`'s comment already documents this as a
+known, deliberate slice-9 gap (dev-workflow tooling), not an oversight.
+Adding it now would be a structural deviation under the plan-frozen rule
+(AGENTS.md §5 step 7) — raised back to the human as an open question
+rather than self-applied. See PR #16 discussion.
+
 ## Summary
 
 Slice 5 of the arch-scaffold epic. Ships the four-service Compose stack
