@@ -1,0 +1,43 @@
+name: compose
+
+# Config-validation only (not a smoke test) — catches a typo'd compose
+# key on any PR touching the stack. Full `up`/health-check smoke
+# testing is a local/slice-9 concern. Path-filtered to skip pure
+# docs/task-dir changes.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      compose: ${{ steps.filter.outputs.compose }}
+    steps:
+      - uses: actions/checkout@v5
+      - id: filter
+        uses: dorny/paths-filter@v3.0.2
+        with:
+          filters: |
+            compose:
+              - 'infra/compose/**'
+              - '.github/workflows/compose.yml'
+
+  config:
+    needs: changes
+    if: needs.changes.outputs.compose == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Validate base overlay
+        run: docker compose -f infra/compose/compose.yml config -q
+
+      - name: Validate prod overlay
+        run: docker compose -f infra/compose/compose.yml -f infra/compose/compose.prod.yml config -q

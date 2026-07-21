@@ -1,7 +1,7 @@
--- Canonical Postgres reference for slice 3 contracts.
--- NOT an executed migration. slice 5 (arch-compose-and-infra) owns
--- the migration format per ADR 0016 (Postgres deferred) and will
--- implement this reference under services/api/migrations/.
+-- Canonical Postgres reference. NOT an executed migration —
+-- slice 6 (services/api) owns the migration harness and implements
+-- this reference under services/api/migrations/, per the migration
+-- format locked in docs/adr/0020-postgres-migration-format.md.
 --
 -- No indexes, no migration verbs, no schema-version header — this
 -- file is a review-time cross-check: if the SQL and the JSON schemas
@@ -13,8 +13,9 @@
 --   ADR 0005      — accounts, sessions
 --   ADR 0007      — media (with media_kind enum)
 --   api.md:35-39  — idempotency_keys
+--   ADR 0020      — embeddings (pgvector; slice 5)
 --
--- ULIDs are stored as `text` at this reference level; slice 5 may
+-- ULIDs are stored as `text` at this reference level; slice 6 may
 -- pick a binary encoding (e.g. bytea/uuid) — the wire schemas keep
 -- the ULID string form regardless.
 
@@ -71,4 +72,20 @@ CREATE TABLE idempotency_keys (
     response_status integer NOT NULL,
     created_at timestamptz NOT NULL,
     PRIMARY KEY (idempotency_key, account_id)
+);
+
+-- One row per indexed unit of media: a photo contributes one row
+-- (frame_index = 0); a video contributes one row per extracted
+-- keyframe (frame_index = 0..N-1), per ADR 0007's photo/video-keyframe
+-- model. `embedding` is vector(512) — PROVISIONAL. The real embedder
+-- model (and thus the true dimension) is a slice-7 decision per
+-- ADR 0010; changing this dimension later is itself a migration, per
+-- ADR 0020.
+CREATE TABLE embeddings (
+    embedding_id text PRIMARY KEY,
+    media_id text NOT NULL REFERENCES media(media_id),
+    frame_index integer NOT NULL,
+    embedding vector(512) NOT NULL,
+    created_at timestamptz NOT NULL,
+    UNIQUE (media_id, frame_index)
 );

@@ -1,0 +1,44 @@
+# infra/compose/compose.prod.yml
+#
+# Prod overlay. Same four services as compose.yml — this file only
+# overrides tags/limits/volumes/restart policy, per ADR 0004's
+# "same service defs, overlay flips tags/limits/volumes" pattern.
+#
+# Apply with both files: `docker compose -f compose.yml -f compose.prod.yml up -d`.
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 1g
+
+  redis:
+    command: ["redis-server", "/usr/local/etc/redis/redis.conf", "--appendonly", "yes"]
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+
+  caddy:
+    restart: unless-stopped
+    environment:
+      SITE_ADDRESS: ${SITE_ADDRESS}
+    ports:
+      - "80:80"
+      - "443:443"
+
+  otel-collector:
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+
+volumes:
+  redis_data:

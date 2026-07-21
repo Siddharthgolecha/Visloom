@@ -33,12 +33,10 @@ classes:
 
 ## Postgres
 
-**Deferred.** Postgres schema evolution (migration naming,
-transaction boundaries, backwards-compat window) is out of scope
-for this doc. A follow-up ADR alongside slice 5
-(`arch-compose-and-infra`) locks the migration format once there
-is a concrete `init.sql` to react to.
-
-Until that ADR lands, `services/api/migrations/` and any
-`init.sql` under `infra/compose/` are unversioned — do not
-depend on a naming convention that hasn't been decided.
+Migration naming, up/down policy, and backwards-compat window are
+locked in [ADR 0020](../adr/0020-postgres-migration-format.md):
+sequential numeric migrations under `services/api/migrations/`,
+up-only, no down-migrations. The `embeddings` table's
+`vector(512)` column is an explicitly provisional dimension per
+that ADR — slice 7 supersedes it once the real embedder model is
+chosen.
