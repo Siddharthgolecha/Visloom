@@ -80,7 +80,10 @@ scope-shaping decisions were already made with the human at kickoff
    *Resolved:* **add it here** — a workflow that runs
    `docker compose config -q` on both overlays. Cheap, catches the
    most common breakage (a typo'd compose key) without requiring the
-   full `make` target set that's slice 9's job.
+   full `make` target set that's slice 9's job. The trigger's path filter
+   covers both `infra/compose/**` and the workflow file itself
+   (`.github/workflows/compose.yml`) so an edit to the CI job self-validates
+   instead of silently going unchecked.
 
 **Open for plan review:**
 
@@ -238,7 +241,7 @@ inventing behavior slices 6/8 own.
 **CI.** `.github/workflows/compose.yml` runs
 `docker compose -f infra/compose/compose.yml config -q` and the same with
 `-f infra/compose/compose.prod.yml` appended, on push/PR touching
-`infra/compose/**`.
+`infra/compose/**` or the workflow file itself.
 
 ### Alternative considered
 
@@ -339,16 +342,17 @@ Every criterion automated-or-observable with a falsifier.
 - [ ] `docker compose -f infra/compose/compose.yml -f infra/compose/compose.prod.yml config -q`
   exits 0. *Falsified if:* nonzero exit or parse error.
 - [ ] A new CI workflow runs both `config -q` invocations above on PRs
-  touching `infra/compose/**`. *Falsified if:* no workflow file references
-  `docker compose ... config`.
+  touching `infra/compose/**` or the workflow file itself. *Falsified if:*
+  no workflow file references `docker compose ... config`, or its path
+  filter omits `.github/workflows/compose.yml`.
 - [ ] Postgres init contains `CREATE EXTENSION IF NOT EXISTS vector` and no
   `CREATE TABLE` statements. *Falsified if:* `grep -c 'CREATE TABLE'
   infra/compose/postgres/init/*.sql` ≠ 0, or the extension line is absent.
 - [ ] `packages/contracts/schema.sql` gains exactly one new table
-  (`embeddings`) with a `vector(N)` column and an explicit
+  (`embeddings`) with a `vector(512)` column and an explicit
   provisional-dimension comment. *Falsified if:* the file's `CREATE TABLE`
-  count changes by anything other than +1, or no comment marks the
-  dimension provisional.
+  count changes by anything other than +1, the column is not exactly
+  `vector(512)`, or no comment marks the dimension provisional.
 - [ ] Running the contracts generator (`scripts/gen-contracts.sh` or
   `packages/contracts`'s `make contracts`) after the `schema.sql` edit
   produces a clean `git status` (no drift). *Falsified if:* the generator
@@ -384,3 +388,21 @@ Every criterion automated-or-observable with a falsifier.
 - [ ] `git diff --name-only main...HEAD` (excluding `.tasks/`) stays within
   `infra/`, `docs/`, `packages/contracts/`, `.github/workflows/`.
   *Falsified if:* any path falls outside that set.
+- [ ] `docker compose -f infra/compose/compose.yml up -d` brings all four
+  services to a running state within 60s. *Falsified if:* any service exits
+  or fails to reach `running`/`healthy` within that window.
+- [ ] `docker compose exec postgres psql -U <u> -d <db> -c '\dx'` lists
+  `vector` in its output. *Falsified if:* the extension is absent from
+  `\dx`.
+- [ ] `docker compose exec redis redis-cli ping` returns `PONG`.
+  *Falsified if:* any other response, timeout, or connection refusal.
+- [ ] The Caddy container's config-stub endpoint returns a non-5xx response.
+  *Falsified if:* the request errors, times out, or returns 5xx.
+- [ ] The OTel collector container's logs contain the standard readiness
+  line ("Everything is ready" or equivalent startup-complete message).
+  *Falsified if:* absent from `docker compose logs otel-collector` within
+  30s of `up`.
+- [ ] `docker compose -f infra/compose/compose.yml down -v` exits 0 and
+  removes the stack's named volumes, confirming the "full reset" claim in
+  [ADR 0004:36][adr4]. *Falsified if:* nonzero exit, or a volume from this
+  stack survives `docker volume ls` afterward.

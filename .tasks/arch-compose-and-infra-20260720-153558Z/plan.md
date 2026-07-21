@@ -46,16 +46,22 @@ Ordered. Each step cites the `spec.md` section it implements.
     directory. Implements the issue's stated deliverable list.
 11. **Compose CI.** Add `.github/workflows/compose.yml` running
     `docker compose ... config -q` on both overlays, triggered on
-    `infra/compose/**` changes. Implements OQ3 (resolved) + the compose
-    CI acceptance criteria.
+    `infra/compose/**` changes *and* changes to the workflow file itself.
+    Implements OQ3 (resolved) + the compose CI acceptance criteria.
 12. **Full verification pass.** `docker compose -f compose.yml [-f compose.prod.yml] config -q`;
     `docker compose ... up -d`; check pgvector extension, Redis ping,
-    Caddy container health, OTel collector readiness log. Implements
-    `spec.md ## Acceptance criteria` end-to-end.
-13. **Overlap check.** `gh pr list --search 'is:draft'`, skim for a
-    parallel ADR-numbering or `packages/contracts/` PR, before requesting
-    `plan-approved`. Implements the ADR-0020-collision mitigation in
-    `spec.md ## Failure modes`.
+    Caddy container health, OTel collector readiness log; `down -v` cleanup.
+    Implements `spec.md ## Acceptance criteria` end-to-end.
+
+## Pre-approval evidence
+
+<!-- Checks that must happen before requesting plan-approved, not implementation steps. -->
+
+- **Overlap check** (`AGENTS.md` §6, mitigates the ADR-0020-collision
+  Failure mode): `gh pr list --search 'is:draft'` run 2026-07-21 — only
+  draft PR is this task's own `#16`. No parallel ADR-numbering or
+  `packages/contracts/` PR. Re-run immediately before `plan-approved` is
+  requested if significant time has passed.
 
 ## Files touched
 
