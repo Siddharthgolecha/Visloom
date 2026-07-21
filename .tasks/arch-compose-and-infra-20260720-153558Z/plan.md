@@ -48,10 +48,14 @@ Ordered. Each step cites the `spec.md` section it implements.
     `docker compose ... config -q` on both overlays, triggered on
     `infra/compose/**` changes *and* changes to the workflow file itself.
     Implements OQ3 (resolved) + the compose CI acceptance criteria.
-12. **Full verification pass.** `docker compose -f compose.yml [-f compose.prod.yml] config -q`;
-    `docker compose ... up -d`; check pgvector extension, Redis ping,
-    Caddy container health, OTel collector readiness log; `down -v` cleanup.
-    Implements `spec.md ## Acceptance criteria` end-to-end.
+12. **Full verification pass.** `docker compose -f infra/compose/compose.yml
+    config -q` (and again with `-f infra/compose/compose.prod.yml`
+    appended); `docker compose -f infra/compose/compose.yml up -d`; check the
+    pgvector extension via `exec postgres psql ... '\dx'`, Redis via `exec
+    redis redis-cli ping`, Caddy via `curl localhost:8080/` (`200`), and the
+    OTel collector's readiness log line via `logs otel-collector`;
+    `-f infra/compose/compose.yml down -v` cleanup. Implements
+    `spec.md ## Acceptance criteria` end-to-end.
 
 ## Pre-approval evidence
 

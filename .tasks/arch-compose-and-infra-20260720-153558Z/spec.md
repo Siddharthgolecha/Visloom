@@ -388,20 +388,25 @@ Every criterion automated-or-observable with a falsifier.
 - [ ] `git diff --name-only main...HEAD` (excluding `.tasks/`) stays within
   `infra/`, `docs/`, `packages/contracts/`, `.github/workflows/`.
   *Falsified if:* any path falls outside that set.
-- [ ] `docker compose -f infra/compose/compose.yml up -d` brings all four
-  services to a running state within 60s. *Falsified if:* any service exits
-  or fails to reach `running`/`healthy` within that window.
-- [ ] `docker compose exec postgres psql -U <u> -d <db> -c '\dx'` lists
-  `vector` in its output. *Falsified if:* the extension is absent from
-  `\dx`.
-- [ ] `docker compose exec redis redis-cli ping` returns `PONG`.
-  *Falsified if:* any other response, timeout, or connection refusal.
-- [ ] The Caddy container's config-stub endpoint returns a non-5xx response.
-  *Falsified if:* the request errors, times out, or returns 5xx.
-- [ ] The OTel collector container's logs contain the standard readiness
-  line ("Everything is ready" or equivalent startup-complete message).
-  *Falsified if:* absent from `docker compose logs otel-collector` within
-  30s of `up`.
+- [ ] `docker compose -f infra/compose/compose.yml up -d` (run from repo
+  root) brings all four services to a running state within 60s. *Falsified
+  if:* any service exits or fails to reach `running`/`healthy` within that
+  window.
+- [ ] `docker compose -f infra/compose/compose.yml exec postgres psql -U <u>
+  -d <db> -c '\dx'` lists `vector` in its output. *Falsified if:* the
+  extension is absent from `\dx`.
+- [ ] `docker compose -f infra/compose/compose.yml exec redis redis-cli
+  ping` returns `PONG`. *Falsified if:* any other response, timeout, or
+  connection refusal.
+- [ ] Caddy's config-stub route responds `200` at `curl -s -o /dev/null -w
+  '%{http_code}' http://localhost:8080/` (host port `8080` mapped to the
+  Caddy container's `:80`, serving a static `respond "ok" 200` at `/` per
+  `## Approach`). *Falsified if:* the request errors, times out, or returns
+  anything other than `200`.
+- [ ] `docker compose -f infra/compose/compose.yml logs otel-collector`
+  contains the standard readiness line ("Everything is ready" or
+  equivalent startup-complete message) within 30s of `up`. *Falsified if:*
+  absent from that command's output.
 - [ ] `docker compose -f infra/compose/compose.yml down -v` exits 0 and
   removes the stack's named volumes, confirming the "full reset" claim in
   [ADR 0004:36][adr4]. *Falsified if:* nonzero exit, or a volume from this
