@@ -1,4 +1,5 @@
 .tasks/*/context.md
+infra/compose/.env
 
 # Python
 __pycache__/

@@ -1,0 +1,31 @@
+# infra/compose/otel/collector.yaml
+#
+# Minimum pipeline that proves the OTLP pipe works end-to-end
+# (docs/adr/0015-observability-otel-first.md:93-97). Backend choice
+# (Grafana Cloud / Honeycomb / self-hosted) is explicitly deferred to
+# ops-time — the debug exporter is what this slice can prove without
+# picking one.
+
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+exporters:
+  debug:
+    verbosity: detailed
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      exporters: [debug]
+    metrics:
+      receivers: [otlp]
+      exporters: [debug]
+    logs:
+      receivers: [otlp]
+      exporters: [debug]

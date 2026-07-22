@@ -219,10 +219,11 @@ authorization boundary is
 
 The tenant boundary is the **event**: media, memberships, and share tokens
 all hang off `events`, and every membership and event ties back to an
-`account`. This mirrors `packages/contracts/schema.sql` exactly — the seven
-tables present today. Embeddings, pgvector columns, and per-frame rows are
-**not** shown: they arrive with the slice-5 migration and are out of scope
-for this reference.
+`account`. This mirrors `packages/contracts/schema.sql` exactly — the eight
+tables present today, including `embeddings` (pgvector), added in slice 5
+per [ADR 0020](../adr/0020-postgres-migration-format.md). Its `vector(512)`
+column is an explicitly **provisional** dimension — the real embedder model
+is a slice-7 decision.
 
 ```mermaid
 erDiagram
@@ -233,6 +234,7 @@ erDiagram
     events ||--o{ share_tokens : "exposed by"
     events ||--o{ media : "contains"
     accounts ||--o{ idempotency_keys : "issued by"
+    media ||--o{ embeddings : "embedded as"
 
     accounts {
         text account_id PK
@@ -280,10 +282,19 @@ erDiagram
         integer response_status
         timestamptz created_at
     }
+    embeddings {
+        text embedding_id PK
+        text media_id FK
+        integer frame_index
+        vector embedding "vector(512), provisional"
+        timestamptz created_at
+    }
 ```
 
 Tables and the `role` / `media_kind` enums are
 `packages/contracts/schema.sql`; the account/session model is
 [ADR 0005](../adr/0005-owner-auth-and-rbac.md); events, memberships, and share
 tokens are [ADR 0008](../adr/0008-tenancy-owner-events-and-share-tokens.md);
-`media_kind` is [ADR 0007](../adr/0007-media-scope-photo-and-video-keyframe.md).
+`media_kind` is [ADR 0007](../adr/0007-media-scope-photo-and-video-keyframe.md);
+the `embeddings` table and its provisional dimension are
+[ADR 0020](../adr/0020-postgres-migration-format.md).

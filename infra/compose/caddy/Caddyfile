@@ -1,0 +1,21 @@
+# infra/compose/caddy/Caddyfile
+#
+# Same-origin routing per docs/architecture/overview.md's Container
+# diagram: web at `/`, API reverse-proxied at `/api/*`. No web/api
+# container exists yet (slices 6/8) — the reverse_proxy directives
+# below are commented out so this slice proves only "config parses,
+# container runs, a stub responds." Uncommenting is an additive edit
+# for slices 6/8, not a Caddyfile rewrite.
+#
+# The site address comes from $SITE_ADDRESS so one file serves both
+# overlays (ADR 0004's "same service defs, overlay flips
+# tags/limits/volumes" pattern): compose.yml defaults it to `:80`
+# (plain HTTP, no TLS); compose.prod.yml sets it to a real domain,
+# which switches Caddy's automatic HTTPS/ACME on.
+
+{$SITE_ADDRESS:80} {
+	# reverse_proxy /api/* api:8080
+	# reverse_proxy web:3000
+
+	respond "ok" 200
+}

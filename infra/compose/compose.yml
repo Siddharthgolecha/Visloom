@@ -1,0 +1,64 @@
+# infra/compose/compose.yml
+#
+# Base overlay (dev). Four services only — postgres, redis, caddy,
+# otel-collector — per ADR 0004:29-31. API/worker/web arrive in
+# slices 6/7/8 as additive service blocks in this same file, not a
+# rewrite.
+#
+# Run from the repo root: `docker compose -f infra/compose/compose.yml up -d`.
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-visloom}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-visloom}
+      POSTGRES_DB: ${POSTGRES_DB:-visloom}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./postgres/init:/docker-entrypoint-initdb.d:ro
+    ports:
+      - "127.0.0.1:5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-visloom}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7
+    command: ["redis-server", "/usr/local/etc/redis/redis.conf"]
+    volumes:
+      - ./redis/redis.conf:/usr/local/etc/redis/redis.conf:ro
+    ports:
+      - "127.0.0.1:6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  caddy:
+    image: caddy:2
+    environment:
+      SITE_ADDRESS: ${SITE_ADDRESS:-:80}
+    volumes:
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    ports:
+      - "127.0.0.1:8080:80"
+
+  otel-collector:
+    image: otel/opentelemetry-collector:0.113.0
+    command: ["--config=/etc/otel/collector.yaml"]
+    volumes:
+      - ./otel/collector.yaml:/etc/otel/collector.yaml:ro
+    ports:
+      - "127.0.0.1:4317:4317"
+      - "127.0.0.1:4318:4318"
+
+volumes:
+  postgres_data:
+  caddy_data:
+  caddy_config:
