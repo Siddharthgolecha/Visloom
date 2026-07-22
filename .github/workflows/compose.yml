@@ -1,9 +1,9 @@
 name: compose
 
 # Config-validation only (not a smoke test) — catches a typo'd compose
-# key on any PR touching the stack. Full `up`/health-check smoke
-# testing is a local/slice-9 concern. Path-filtered to skip pure
-# docs/task-dir changes.
+# key, Caddyfile, or OTel collector config on any PR touching the stack.
+# Full `up`/health-check smoke testing is a local/slice-9 concern.
+# Path-filtered to skip pure docs/task-dir changes.
 
 on:
   push:
@@ -41,3 +41,13 @@ jobs:
 
       - name: Validate prod overlay
         run: docker compose -f infra/compose/compose.yml -f infra/compose/compose.prod.yml config -q
+
+      - name: Validate Caddyfile
+        run: |
+          docker run --rm -v "$PWD/infra/compose/caddy/Caddyfile:/etc/caddy/Caddyfile:ro" \
+            caddy:2 caddy validate --config /etc/caddy/Caddyfile
+
+      - name: Validate OTel collector config
+        run: |
+          docker run --rm -v "$PWD/infra/compose/otel/collector.yaml:/etc/otel/collector.yaml:ro" \
+            otel/opentelemetry-collector:0.113.0 validate --config /etc/otel/collector.yaml

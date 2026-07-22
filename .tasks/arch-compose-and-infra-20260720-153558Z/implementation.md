@@ -115,13 +115,46 @@ non-structurally without touching `spec.md`/`plan.md`:
    `frame_index = -1` raises `embeddings_frame_index_check` and
    `frame_index = 0` still inserts. `tested-against-real-input`.
 
-A third reviewer finding — add `infra/compose/.env` to `.gitignore` — is
+~~A third reviewer finding — add `infra/compose/.env` to `.gitignore` — is
 **not applied** here. `.gitignore` is outside the frozen `## Files
 touched` list, and `.env.example`'s comment already documents this as a
 known, deliberate slice-9 gap (dev-workflow tooling), not an oversight.
 Adding it now would be a structural deviation under the plan-frozen rule
 (AGENTS.md §5 step 7) — raised back to the human as an open question
-rather than self-applied. See PR #16 discussion.
+rather than self-applied. See PR #16 discussion.~~ **Reversed — see the
+2026-07-23 entry below.**
+
+**Post-ready review fix (2026-07-23), structural — plan re-approved.**
+Reviewer raised the same `.gitignore` gap again plus two new findings.
+The human removed `plan-approved` and directed the `.gitignore` fix to
+land in this PR; `plan.md ## Files touched` and `spec.md`'s path-scope
+acceptance criterion were updated accordingly before re-implementing
+(re-approval pending).
+
+1. **`.gitignore` for `infra/compose/.env` (structural).** Added
+   `infra/compose/.env` to `.gitignore`; reworded `.env.example`'s header
+   comment to state the file is now ignored (previously said it wasn't).
+   `tested-against-real-input` — `git status` after touching a scratch
+   `infra/compose/.env` shows it untracked/ignored.
+2. **Dev ports bound to all interfaces (non-structural — `compose.yml`
+   already in frozen list).** `compose.yml` published Postgres `5432`,
+   Redis `6379`, Caddy `8080`, and the OTel collector's `4317`/`4318` on
+   `0.0.0.0`, compounding Redis's `protected-mode no` and Postgres's
+   sample credentials into a LAN-reachable, unauthenticated data plane.
+   Fixed by binding all four to `127.0.0.1` explicitly (`127.0.0.1:PORT:PORT`).
+   `tested-against-real-input` — brought the stack up post-fix and
+   confirmed via `docker compose ps` that every published port shows the
+   `127.0.0.1:` prefix; re-ran the full Postgres/Redis/Caddy/OTel
+   acceptance checks against the loopback-bound stack, all still pass.
+3. **CI validated Compose YAML only, not the mounted Caddy/OTel configs
+   (non-structural — `.github/workflows/compose.yml` already in frozen
+   list).** `docker compose config -q` doesn't parse `Caddyfile` or
+   `collector.yaml` — a typo in either would only surface at `up` time,
+   which CI doesn't run. Added two CI steps: `caddy validate --config`
+   and `otel-collector validate --config`, each run directly via
+   `docker run` against the mounted file, matching how `compose.yml`
+   mounts them. `tested-against-real-input` — ran both commands locally
+   against the actual files; both exit 0.
 
 ## Summary
 
@@ -131,16 +164,17 @@ and discharges the two decisions slices 1–4 explicitly deferred here: the
 Postgres migration format (ADR 0020) and the `embeddings`/pgvector table
 the diagrams spec forward-referenced.
 
-**Files (14):**
+**Files (15):**
 
 - `infra/compose/compose.yml` (new) — base overlay, 4 services only
-  (postgres/redis/caddy/otel-collector), named volumes + healthchecks.
-  `tested-against-real-input`.
+  (postgres/redis/caddy/otel-collector), named volumes + healthchecks,
+  all published ports bound to `127.0.0.1`. `tested-against-real-input`.
 - `infra/compose/compose.prod.yml` (new) — prod overlay: pinned pgvector
   image, `restart: unless-stopped`, Redis `appendonly`, resource limits.
   `tested-against-real-input` (config-validated; `up` only exercised
   against the base overlay per plan scope).
-- `infra/compose/.env.example` (new) — placeholder env vars only.
+- `infra/compose/.env.example` (new) — placeholder env vars only; header
+  comment reflects `infra/compose/.env` being gitignored.
   `tested-against-real-input`.
 - `infra/compose/postgres/init/001-extensions.sql` (new) — pgvector
   extension bootstrap, no app tables. `tested-against-real-input`.
@@ -167,8 +201,9 @@ the diagrams spec forward-referenced.
 - `docs/conventions/data.md` — `## Postgres` repointed at ADR 0020,
   "Deferred" language removed. `tested-against-real-input`.
 - `.github/workflows/compose.yml` (new) — `docker compose config -q` CI on
-  both overlays, path-filtered to `infra/compose/**` + itself.
-  `tested-against-real-input`.
+  both overlays plus `caddy validate` and `otel-collector validate`,
+  path-filtered to `infra/compose/**` + itself. `tested-against-real-input`.
+- `.gitignore` — ignores `infra/compose/.env`. `tested-against-real-input`.
 
 **Verification (all pass):** both overlays `config -q` clean; the
 `contracts` generator produces no drift after the `schema.sql` edit; ER

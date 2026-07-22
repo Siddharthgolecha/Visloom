@@ -83,6 +83,8 @@ Ordered. Each step cites the `spec.md` section it implements.
 - `docs/adr/README.md` — index row for 0020.
 - `docs/conventions/data.md` — repoint `## Postgres` at ADR 0020.
 - `.github/workflows/compose.yml` — new; compose config CI job.
+- `.gitignore` — ignore `infra/compose/.env` (added post-review; see
+  `implementation.md ## Deviations`).
 
 ## Depends on
 

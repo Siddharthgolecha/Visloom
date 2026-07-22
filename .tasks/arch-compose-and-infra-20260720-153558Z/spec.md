@@ -386,8 +386,10 @@ Every criterion automated-or-observable with a falsifier.
   *Falsified if:* any value looks like a live credential (manual review —
   privacy-by-default).
 - [ ] `git diff --name-only main...HEAD` (excluding `.tasks/`) stays within
-  `infra/`, `docs/`, `packages/contracts/`, `.github/workflows/`.
-  *Falsified if:* any path falls outside that set.
+  `infra/`, `docs/`, `packages/contracts/`, `.github/workflows/`, plus
+  `.gitignore` (added post-review to cover `infra/compose/.env`; see
+  `plan.md ## Files touched`). *Falsified if:* any path falls outside that
+  set.
 - [ ] `docker compose -f infra/compose/compose.yml up -d` (run from repo
   root) brings all four services to a running state within 60s. *Falsified
   if:* any service exits or fails to reach `running`/`healthy` within that
